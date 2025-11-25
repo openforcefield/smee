@@ -57,7 +57,7 @@ def test_convert_to_openmm_ffxml(tmp_cwd, with_constraints, smiles):
         switchDistance=8.0 * openmm.unit.angstrom,
         constraints=openmm.app.HBonds if with_constraints else None,
         rigidWater=True,
-        removeCMMotion=False,
+        removeCMMotion=True,
     )
     system_from_off = off_ff.create_openmm_system(off_top)
 
@@ -114,7 +114,7 @@ def test_convert_to_openmm_ffxml_v_sites(tmp_cwd):
         switchDistance=8.0 * openmm.unit.angstrom,
         constraints=openmm.app.HBonds,
         rigidWater=True,
-        removeCMMotion=False,
+        removeCMMotion=True,
     )
     system_from_off = off_ff.create_openmm_system(off_top)
 
