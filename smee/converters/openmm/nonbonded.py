@@ -7,6 +7,8 @@ import typing
 import openmm
 import torch
 
+from tholedipoleplugin import TholeDipoleForce
+
 import smee
 import smee.converters.openmm
 import smee.potentials.nonbonded
@@ -571,109 +573,155 @@ def convert_dampedexp6810_potential(
 )
 def convert_multipole_potential(
         potential: smee.TensorPotential, system: smee.TensorSystem
-) -> openmm.AmoebaMultipoleForce:
-    """Convert a Multipole potential to OpenMM forces."""
+) -> TholeDipoleForce:
+    """Convert a Multipole potential to OpenMM TholeDipoleForce.
 
-    thole = 0.39
+    TholeDipole parameter layout (9 columns):
+        Column 0: charge (e)
+        Columns 1-3: molecularDipole (e·Å, x, y, z)
+        Column 4: axisType (int, 0-5)
+        Column 5: multipoleAtomZ (int)
+        Column 6: multipoleAtomX (int)
+        Column 7: multipoleAtomY (int)
+        Column 8: polarity (Å³)
+    """
     cutoff_idx = potential.attribute_cols.index(smee.CUTOFF_ATTRIBUTE)
-    cutoff = float(potential.attributes[cutoff_idx]) * _ANGSTROM
+    cutoff = float(potential.attributes[cutoff_idx]) * 0.1  # Å to nm
 
-    force: openmm.AmoebaMultipoleForce = openmm.AmoebaMultipoleForce()
+    force = TholeDipoleForce()
 
     if system.is_periodic:
-        force.setNonbondedMethod(openmm.AmoebaMultipoleForce.PME)
+        force.setNonbondedMethod(TholeDipoleForce.PME)
     else:
-        force.setNonbondedMethod(openmm.AmoebaMultipoleForce.NoCutoff)
-    force.setPolarizationType(openmm.AmoebaMultipoleForce.Mutual)
+        force.setNonbondedMethod(TholeDipoleForce.NoCutoff)
+
+    force.setPolarizationType(TholeDipoleForce.Mutual)
     force.setCutoffDistance(cutoff)
     force.setEwaldErrorTolerance(0.0001)
     force.setMutualInducedTargetEpsilon(0.00001)
     force.setMutualInducedMaxIterations(60)
     force.setExtrapolationCoefficients([-0.154, 0.017, 0.658, 0.474])
+    force.setTholeDampingType(TholeDipoleForce.Amoeba)
+    force.setTholeDampingParameter(0.39)
+
+    # Map AMOEBA axis types to TholeDipole axis types
+    # AMOEBA: NoAxisType=0, ZOnly=1, ZThenX=2, Bisector=3, ZBisect=4, ThreeFold=5
+    # TholeDipole: ZThenX=0, Bisector=1, ZBisect=2, ThreeFold=3, ZOnly=4, NoAxisType=5
+    amoeba_to_thole_axis = {
+        0: TholeDipoleForce.NoAxisType,   # AMOEBA NoAxisType -> TholeDipole NoAxisType
+        1: TholeDipoleForce.ZOnly,         # AMOEBA ZOnly -> TholeDipole ZOnly
+        2: TholeDipoleForce.ZThenX,        # AMOEBA ZThenX -> TholeDipole ZThenX
+        3: TholeDipoleForce.Bisector,      # AMOEBA Bisector -> TholeDipole Bisector
+        4: TholeDipoleForce.ZBisect,       # AMOEBA ZBisect -> TholeDipole ZBisect
+        5: TholeDipoleForce.ThreeFold,     # AMOEBA ThreeFold -> TholeDipole ThreeFold
+    }
 
     idx_offset = 0
 
     for topology, n_copies in zip(system.topologies, system.n_copies):
         parameter_map = topology.parameters[potential.type]
         parameters = parameter_map.assignment_matrix @ potential.parameters
-        parameters = parameters.detach().tolist()
+        parameters = parameters.detach()
+
+        n_particles = topology.n_particles
+        n_params = parameters.shape[1]
 
         for _ in range(n_copies):
-            for _ in range(topology.n_particles):
-                force.addMultipole(
-                    0,
-                    (0.0, 0.0, 0.0),
-                    (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-                    openmm.AmoebaMultipoleForce.NoAxisType,
-                    -1,
-                    -1,
-                    -1,
-                    thole,
-                    0,
-                    0,
+            for atom_idx in range(n_particles):
+                # Get charge from first n_particles rows
+                charge = float(parameters[atom_idx, 0])
+
+                # Get dipole, axisType, frame atoms, polarity from rows n_particles to 2*n_particles
+                if parameters.shape[0] > n_particles:
+                    pol_row = parameters[n_particles + atom_idx]
+
+                    if n_params == 20:
+                        # AMOEBA-style 20-column layout (current PHAST force field):
+                        # Col 0: charge, 1-3: dipole, 4-12: quadrupole (ignored)
+                        # Col 13: axisType, 14-16: atomZ/X/Y, 17: thole, 18: dampingFactor, 19: polarity
+                        dipole = [float(pol_row[1]) * 0.1, float(pol_row[2]) * 0.1, float(pol_row[3]) * 0.1]  # e·Å to e·nm
+                        amoeba_axis_type = int(pol_row[13])
+                        atom_z = int(pol_row[14])
+                        atom_x = int(pol_row[15])
+                        atom_y = int(pol_row[16])
+                        polarity = float(pol_row[19]) * 0.001  # Å³ to nm³
+
+                        # Map axis type, but force NoAxisType if no valid axis atoms
+                        if atom_z < 0:
+                            axis_type = TholeDipoleForce.NoAxisType
+                        else:
+                            axis_type = amoeba_to_thole_axis.get(amoeba_axis_type, TholeDipoleForce.NoAxisType)
+                    elif n_params == 9:
+                        # TholeDipole 9-column layout:
+                        # Col 0: charge, 1-3: dipole, 4: axisType, 5-7: atomZ/X/Y, 8: polarity
+                        dipole = [float(pol_row[1]) * 0.1, float(pol_row[2]) * 0.1, float(pol_row[3]) * 0.1]
+                        axis_type = int(pol_row[4])
+                        atom_z = int(pol_row[5])
+                        atom_x = int(pol_row[6])
+                        atom_y = int(pol_row[7])
+                        polarity = float(pol_row[8]) * 0.001
+                    else:
+                        # Fallback: assume dipole at 1-3, polarity at last column
+                        dipole = [float(pol_row[1]) * 0.1, float(pol_row[2]) * 0.1, float(pol_row[3]) * 0.1]
+                        axis_type = TholeDipoleForce.NoAxisType
+                        atom_z = -1
+                        atom_x = -1
+                        atom_y = -1
+                        polarity = float(pol_row[n_params - 1]) * 0.001 if n_params > 4 else 0.0
+                else:
+                    dipole = [0.0, 0.0, 0.0]
+                    axis_type = TholeDipoleForce.NoAxisType
+                    atom_z = -1
+                    atom_x = -1
+                    atom_y = -1
+                    polarity = 0.0
+
+                force.addParticle(
+                    charge,
+                    dipole,
+                    polarity,
+                    axis_type,
+                    atom_z + idx_offset if atom_z >= 0 else -1,
+                    atom_x + idx_offset if atom_x >= 0 else -1,
+                    atom_y + idx_offset if atom_y >= 0 else -1,
                 )
 
-            for idx, parameter in enumerate(parameters):
-                omm_idx = idx % topology.n_particles + idx_offset
-                omm_params = force.getMultipoleParameters(omm_idx)
-                if idx < topology.n_particles:
-                    omm_params[0] = parameter[0] * openmm.unit.elementary_charge
-                else:
-                    omm_params[8] = (parameter[19] / 1000) ** (1 / 6)
-                    omm_params[9] = parameter[19] * _ANGSTROM ** 3
-                force.setMultipoleParameters(omm_idx, *omm_params)
-
-            covalent_12_13_maps = {}
+            # Set up covalent maps (TholeDipole uses 4 types: Covalent12-15)
+            covalent_12_maps = {}
+            covalent_13_maps = {}
             covalent_14_maps = {}
-            covalent_pol_maps = {}
+            covalent_15_maps = {}
 
             for (i, j), scale_idx in zip(parameter_map.exclusions, parameter_map.exclusion_scale_idxs):
-                if scale_idx == 3:  # Don't exclude 1-5 interactions
-                    continue
-                elif scale_idx == 2:  # 1-4 interactions
-                    covalent_maps = covalent_14_maps
-                else:
-                    covalent_maps = covalent_12_13_maps
-
                 i = int(i) + idx_offset
                 j = int(j) + idx_offset
 
-                if i in covalent_maps.keys():
-                    covalent_maps[i].append(j)
-                else:
-                    covalent_maps[i] = [j]
-                if j in covalent_maps.keys():
-                    covalent_maps[j].append(i)
-                else:
-                    covalent_maps[j] = [i]
+                if scale_idx == 0:  # 1-2 interactions
+                    covalent_maps = covalent_12_maps
+                elif scale_idx == 1:  # 1-3 interactions
+                    covalent_maps = covalent_13_maps
+                elif scale_idx == 2:  # 1-4 interactions
+                    covalent_maps = covalent_14_maps
+                else:  # 1-5+ interactions
+                    covalent_maps = covalent_15_maps
 
-                if i in covalent_pol_maps.keys():
-                    covalent_pol_maps[i].append(j)
-                else:
-                    covalent_pol_maps[i] = [j]
-                if j in covalent_pol_maps.keys():
-                    covalent_pol_maps[j].append(i)
-                else:
-                    covalent_pol_maps[j] = [i]
+                if i not in covalent_maps:
+                    covalent_maps[i] = []
+                if j not in covalent_maps:
+                    covalent_maps[j] = []
+                covalent_maps[i].append(j)
+                covalent_maps[j].append(i)
 
-            for i in covalent_12_13_maps.keys():
-                force.setCovalentMap(
-                    i, openmm.AmoebaMultipoleForce.Covalent12, covalent_12_13_maps[i]
-                )
+            for i, atoms in covalent_12_maps.items():
+                force.setCovalentMap(i, TholeDipoleForce.Covalent12, atoms)
+            for i, atoms in covalent_13_maps.items():
+                force.setCovalentMap(i, TholeDipoleForce.Covalent13, atoms)
+            for i, atoms in covalent_14_maps.items():
+                force.setCovalentMap(i, TholeDipoleForce.Covalent14, atoms)
+            for i, atoms in covalent_15_maps.items():
+                force.setCovalentMap(i, TholeDipoleForce.Covalent15, atoms)
 
-            for i in covalent_14_maps.keys():
-                force.setCovalentMap(
-                    i, openmm.AmoebaMultipoleForce.Covalent14, covalent_14_maps[i]
-                )
-
-            for i in covalent_pol_maps.keys():
-                force.setCovalentMap(
-                    i,
-                    openmm.AmoebaMultipoleForce.PolarizationCovalent11,
-                    covalent_pol_maps[i],
-                )
-
-            idx_offset += topology.n_particles
+            idx_offset += n_particles
 
     return force
 

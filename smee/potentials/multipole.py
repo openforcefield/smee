@@ -20,7 +20,6 @@ def compute_multipole_energy(
         polarization_type: str = "mutual",
         extrapolation_coefficients: list[float] | None = None,
 ) -> torch.Tensor:
-    print(f"DEBUG: Multipole energy calculation with polarization_type={polarization_type}")
     """Compute the multipole energy including polarization effects.
 
     This function supports the full AMOEBA multipole model with the following parameters
@@ -85,7 +84,6 @@ def compute_multipole_energy(
     multipole_atom_x = []  # X-axis defining atom indices  
     multipole_atom_y = []  # Y-axis defining atom indices
     thole_params = []
-    damping_factors = []
     polarizabilities = []
 
     # Extract parameters from parameter matrix
@@ -116,7 +114,6 @@ def compute_multipole_energy(
         multipole_atom_x.append(topology_parameters[n_particles:, 15].repeat(n_copies).int())
         multipole_atom_y.append(topology_parameters[n_particles:, 16].repeat(n_copies).int())
         thole_params.append(topology_parameters[n_particles:, 17].repeat(n_copies))
-        damping_factors.append(topology_parameters[n_particles:, 18].repeat(n_copies))
         polarizabilities.append(topology_parameters[n_particles:, 19].repeat(n_copies))
 
     # Concatenate all parameter lists
@@ -128,12 +125,15 @@ def compute_multipole_energy(
     multipole_atom_x = torch.cat(multipole_atom_x)  # Shape: (n_total_particles,)
     multipole_atom_y = torch.cat(multipole_atom_y)  # Shape: (n_total_particles,)
     thole_params = torch.cat(thole_params)  # Shape: (n_total_particles,)
-    damping_factors = torch.cat(damping_factors)  # Shape: (n_total_particles,)
     polarizabilities = torch.cat(polarizabilities)  # Shape: (n_total_particles,)
 
-    pair_scales = compute_pairwise_scales(system, potential)
+    # Override scale factors to match TholeDipole convention
+    # TholeDipole uses [0, 0, 0.5, 1.0] for 1-2, 1-3, 1-4, 1-5 (vs AMOEBA's [0, 0, 0.4, 0.8/1.0])
+    if 'scale_14' in potential.attribute_cols:
+        scale_14_idx = potential.attribute_cols.index('scale_14')
+        potential.attributes[scale_14_idx] = 0.5
 
-    print(f"DEBUG: pair_scales {pair_scales}")
+    pair_scales = compute_pairwise_scales(system, potential)
 
     # static partial charge - partial charge energy
     if system.is_periodic == False:
@@ -200,11 +200,8 @@ def compute_multipole_energy(
 
         coul_energy = energy_direct + energy_recip + energy_exclusion
 
-    print(
-        f"DEBUG: Polarizabilities check - all zero? {torch.allclose(polarizabilities, torch.tensor(0.0, dtype=torch.float64))}")
-    print(f"DEBUG: Polarizabilities: {polarizabilities}")
+    # If all polarizabilities are zero, just return the Coulomb energy
     if torch.allclose(polarizabilities, torch.tensor(0.0, dtype=torch.float64)):
-        print("DEBUG: Returning early - all polarizabilities are zero")
         return coul_energy
 
     # Handle batch vs single conformer - process each conformer individually
@@ -233,16 +230,26 @@ def compute_multipole_energy(
 
     # Continue with single conformer processing
     efield_static = torch.zeros((system.n_particles, 3), dtype=torch.float64, device=conformer.device)
+    efield_static_polar = torch.zeros((system.n_particles, 3), dtype=torch.float64, device=conformer.device)
+
+    # TholeDipole scale factors (different from AMOEBA):
+    # mScale: permanent-permanent interactions [1-2, 1-3, 1-4, 1-5, 1-6+]
+    # iScale: induced-induced interactions
+    # TholeDipole uses [0, 0, 0.5, 1.0, 1.0] for mScale (vs AMOEBA's [0, 0, 0, 0.4, 0.8])
+    mScale = torch.tensor([0.0, 0.0, 0.5, 1.0, 1.0], dtype=torch.float64)
+    dScale = torch.tensor([0.0, 1.0, 1.0, 1.0, 1.0], dtype=torch.float64)
+    pScale = torch.tensor([0.0, 0.0, 0.0, 1.0, 1.0], dtype=torch.float64)
+    uScale = torch.tensor([1.0, 1.0, 1.0, 1.0, 1.0], dtype=torch.float64)
 
     # calculate electric field due to partial charges by hand
-    # TODO wolf summation for periodic
+    # TODO ewald or wolf summation for periodic
     _SQRT_COULOMB_PRE_FACTOR = _COULOMB_PRE_FACTOR ** (1 / 2)
+    # Calculate fixed dipole field from permanent charges
+    # TholeDipole applies mScale to the field calculation
     for distance, delta, idx, scale in zip(
             pairwise.distances, pairwise.deltas, pairwise.idxs, pair_scales
     ):
-        if scale < 1:
-            scale = 0
-
+        # Use actual scale value (don't zero out partial scales)
         if polarizabilities[idx[0]] * polarizabilities[idx[1]] != 0:
             u = distance / (polarizabilities[idx[0]] * polarizabilities[idx[1]]) ** (
                     1.0 / 6.0
@@ -279,8 +286,8 @@ def compute_multipole_energy(
     # reshape to (3*N) vector
     efield_static = efield_static.reshape(3 * system.n_particles)
 
+    # If there's no electric field, no polarization energy
     if torch.allclose(efield_static, torch.tensor(0.0, dtype=torch.float64)):
-        print("DEBUG: Returning early - static e field is zero")
         return coul_energy
 
     # induced dipole vector - start with direct polarization
@@ -290,8 +297,10 @@ def compute_multipole_energy(
     if polarization_type in ["mutual", "extrapolated"]:
         A = torch.nan_to_num(torch.diag(torch.repeat_interleave(1.0 / polarizabilities, 3)))
 
-        for distance, delta, idx, scale in zip(
-                pairwise.distances, pairwise.deltas, pairwise.idxs, pair_scales
+        # Build A matrix for induced-induced coupling
+        # NOTE: TholeDipole uses iScale=1.0 for ALL covalent types (no exclusions)
+        for distance, delta, idx in zip(
+                pairwise.distances, pairwise.deltas, pairwise.idxs
         ):
             if polarizabilities[idx[0]] * polarizabilities[idx[1]] != 0:
                 u = distance / (polarizabilities[idx[0]] * polarizabilities[idx[1]]) ** (
@@ -304,14 +313,14 @@ def compute_multipole_energy(
             thole_a = torch.min(thole_params[idx[0]], thole_params[idx[1]])
             au3 = thole_a * u ** 3
             exp_au3 = torch.exp(-au3)
-            damping_term1 = 1 - exp_au3
-            damping_term2 = 1 - (1 + 1.5 * au3) * exp_au3
+            thole3 = 1 - exp_au3
+            thole5 = 1 - (1 + au3) * exp_au3  # Note: (1 + au3), NOT (1 + 1.5*au3)
 
             t = (
-                    torch.eye(3, dtype=torch.float64, device=conformer.device) * damping_term1 * distance ** -3
-                    - 3 * damping_term2 * torch.einsum("i,j->ij", delta, delta) * distance ** -5
+                    torch.eye(3, dtype=torch.float64, device=conformer.device) * thole3 * distance ** -3
+                    - 3 * thole5 * torch.einsum("i,j->ij", delta, delta) * distance ** -5
             )
-            t *= scale
+            # No scale factor - iScale is always 1.0 in TholeDipole
             A[3 * idx[0]: 3 * idx[0] + 3, 3 * idx[1]: 3 * idx[1] + 3] = t
             A[3 * idx[1]: 3 * idx[1] + 3, 3 * idx[0]: 3 * idx[0] + 3] = t
 
@@ -321,52 +330,59 @@ def compute_multipole_energy(
         # ind_dipoles is already μ^(0) = α * E, so no additional work needed
         pass
     elif polarization_type == "extrapolated":
+        # TholeDipole extrapolation uses simple iterative updates (NOT conjugate gradient)
+        # μ_0 = α * E_fixed  (direct polarization)
+        # μ_n = α * (E_fixed + E_induced(μ_{n-1}))  for n = 1, 2, 3
+        # μ_final = Σ c_k * μ_k
         if extrapolation_coefficients is None:
-            extrapolation_coefficients = [-0.154, 0.017, 0.657, 0.475]
+            # TholeDipole default OPT4 coefficients
+            extrapolation_coefficients = [-0.154, 0.017, 0.658, 0.474]
 
         opt_coeffs = torch.tensor(extrapolation_coefficients, dtype=torch.float64, device=conformer.device)
         n_orders = len(opt_coeffs)
 
-        # Store SCF iteration snapshots
-        scf_snapshots = []
-        scf_snapshots.append(ind_dipoles.clone())  # Iteration 0: direct polarization
+        # Store perturbation theory orders
+        pt_dipoles = []
+        pt_dipoles.append(ind_dipoles.clone())  # PT0: direct polarization μ = α * E_fixed
 
-        # Run n_orders-1 SCF iterations and save snapshots
-        precondition_m = torch.repeat_interleave(polarizabilities, 3)
-        residual = efield_static - A @ ind_dipoles
-        z = torch.einsum("i,i->i", precondition_m, residual)
-        p = torch.clone(z)
+        # Build dipole-dipole interaction tensor T for computing induced fields
+        # E_induced[i] = Σ_j T[i,j] @ μ[j]
+        T = torch.zeros((3 * system.n_particles, 3 * system.n_particles), dtype=torch.float64,
+                        device=conformer.device)
+        for distance, delta, idx in zip(pairwise.distances, pairwise.deltas, pairwise.idxs):
+            if polarizabilities[idx[0]] * polarizabilities[idx[1]] != 0:
+                u = distance / (polarizabilities[idx[0]] * polarizabilities[idx[1]]) ** (1.0 / 6.0)
+            else:
+                u = distance
 
+            thole_a = torch.min(thole_params[idx[0]], thole_params[idx[1]])
+            au3 = thole_a * u ** 3
+            exp_au3 = torch.exp(-au3)
+            thole3 = 1 - exp_au3
+            thole5 = 1 - (1 + au3) * exp_au3
+
+            # Dipole field tensor: E = [-thole3*μ/r³ + 3*thole5*(μ·r̂)r̂/r³]
+            t = (
+                -torch.eye(3, dtype=torch.float64, device=conformer.device) * thole3 * distance ** -3
+                + 3 * thole5 * torch.einsum("i,j->ij", delta, delta) * distance ** -5
+            )
+            T[3 * idx[0]: 3 * idx[0] + 3, 3 * idx[1]: 3 * idx[1] + 3] = t
+            T[3 * idx[1]: 3 * idx[1] + 3, 3 * idx[0]: 3 * idx[0] + 3] = t
+
+        # Generate higher order PT terms
         current_dipoles = ind_dipoles.clone()
+        for order in range(1, n_orders):
+            # Calculate induced field from current dipoles
+            efield_induced = T @ current_dipoles
 
-        for iteration in range(n_orders - 1):  # If we have 4 coeffs, run 3 iterations
-            # Standard conjugate gradient step
-            alpha = torch.dot(residual, z) / (p @ A @ p)
-            current_dipoles = current_dipoles + alpha * p
+            # Update dipoles: μ_n = α * (E_fixed + E_induced)
+            current_dipoles = torch.repeat_interleave(polarizabilities, 3) * (efield_static + efield_induced)
+            pt_dipoles.append(current_dipoles.clone())
 
-            # Save snapshot after this iteration
-            scf_snapshots.append(current_dipoles.clone())
-
-            prev_residual = torch.clone(residual)
-            prev_z = torch.clone(z)
-
-            residual = residual - alpha * A @ p
-
-            # Check convergence (but continue to get all snapshots)
-            if torch.dot(residual, residual) < 1e-7:
-                # If converged early, use the converged result for remaining snapshots
-                for _ in range(iteration + 1, n_orders - 1):
-                    scf_snapshots.append(current_dipoles.clone())
-                break
-
-            z = torch.einsum("i,i->i", precondition_m, residual)
-            beta = torch.dot(z, residual) / torch.dot(prev_z, prev_residual)
-            p = z + beta * p
-
-        # Apply OPT combination: μ_OPT = Σ(k=0 to n_orders-1) c_k μ_k
+        # Combine PT orders with extrapolation coefficients
         ind_dipoles = torch.zeros_like(ind_dipoles)
-        for k in range(min(n_orders, len(scf_snapshots))):
-            ind_dipoles += opt_coeffs[k] * scf_snapshots[k]
+        for k in range(n_orders):
+            ind_dipoles += opt_coeffs[k] * pt_dipoles[k]
 
     else:  # mutual
         # Mutual polarization using conjugate gradient
@@ -375,7 +391,8 @@ def compute_multipole_energy(
         z = torch.einsum("i,i->i", precondition_m, residual)
         p = torch.clone(z)
 
-        for _ in range(60):
+        converged_iter = 60
+        for iter_num in range(60):
             alpha = torch.dot(residual, z) / (p @ A @ p)
             ind_dipoles = ind_dipoles + alpha * p
 
@@ -384,7 +401,9 @@ def compute_multipole_energy(
 
             residual = residual - alpha * A @ p
 
+            rms_residual = torch.sqrt(torch.dot(residual, residual) / len(residual))
             if torch.dot(residual, residual) < 1e-7:
+                converged_iter = iter_num + 1
                 break
 
             z = torch.einsum("i,i->i", precondition_m, residual)
@@ -394,67 +413,12 @@ def compute_multipole_energy(
     # Reshape induced dipoles back to (N, 3) for energy calculations
     ind_dipoles_3d = ind_dipoles.reshape(system.n_particles, 3)
 
-    # DEBUG: Print induced dipoles for comparison
-    print(f"\nSMEE induced dipoles (e·Å):")
-    for i in range(system.n_particles):
-        dipole = ind_dipoles_3d[i].tolist()
-        print(f"  Particle {i}: [{dipole[0]:.10f}, {dipole[1]:.10f}, {dipole[2]:.10f}]")
-
-    # Calculate polarization energy based on method
-    if polarization_type == "direct" or polarization_type == "extrapolated":
-    #if False:
-        # For direct and extrapolated: permanent-induced + self-energy + induced-induced
-        # 1. Permanent-induced interaction: -μ · E^permanent
-        coul_energy += -torch.dot(ind_dipoles, efield_static)
-
-        # 2. Self-energy: +½ Σ (μ²/α)
-        self_energy = 0.5 * torch.sum(
-            torch.sum(ind_dipoles_3d ** 2, dim=1) / polarizabilities
-        )
-        coul_energy += self_energy
-
-        # 3. Induced-induced interaction: -½ μ · E^induced
-        # Build T_induced matrix for induced field calculation
-        T_induced = torch.zeros((3 * system.n_particles, 3 * system.n_particles), dtype=torch.float64,
-                                device=conformer.device)
-
-        for distance, delta, idx, scale in zip(
-                pairwise.distances, pairwise.deltas, pairwise.idxs, pair_scales
-        ):
-            # Correct AMOEBA Thole damping implementation
-            alpha_i = polarizabilities[idx[0]]
-            alpha_j = polarizabilities[idx[1]]
-
-            # Effective Thole distance: (αi * αj)^(1/6)
-            a_eff = (alpha_i * alpha_j) ** (1.0 / 6.0)
-
-            # u = r / a_eff
-            u = distance / a_eff
-
-            # Use the Thole parameter (typically 0.39) in the damping function
-            thole_a = torch.min(thole_params[idx[0]], thole_params[idx[1]])
-            au3 = thole_a * u ** 3
-            exp_au3 = torch.exp(-au3)
-            damping_term1 = 1 - exp_au3
-            damping_term2 = 1 - (1 + 1.5 * au3) * exp_au3
-
-            t = (
-                    torch.eye(3, dtype=torch.float64, device=conformer.device) * damping_term1 * distance ** -3
-                    - 3 * damping_term2 * torch.einsum("i,j->ij", delta.double(), delta.double()) * distance ** -5
-            )
-            t *= scale
-
-            T_induced[3 * idx[0]: 3 * idx[0] + 3, 3 * idx[1]: 3 * idx[1] + 3] = t
-            T_induced[3 * idx[1]: 3 * idx[1] + 3, 3 * idx[0]: 3 * idx[0] + 3] = t
-
-        # Induced-induced energy: -½ μ · (T @ μ)
-        efield_induced_flat = T_induced @ ind_dipoles
-        coul_energy += -0.5 * torch.dot(ind_dipoles, efield_induced_flat)
-
-    #elif polarization_type == "mutual":
-    else:
-        # For mutual polarization: use standard SCF formula
-        # This automatically includes all components when converged
-        coul_energy += -0.5 * torch.dot(ind_dipoles, efield_static)
+    # Calculate polarization energy
+    # TholeDipole uses the same formula for ALL polarization types: -0.5 * μ · E_fixed
+    # This works because:
+    # - For Direct: μ = α * E_fixed, so U = -0.5 * α * |E_fixed|²
+    # - For Mutual: At SCF convergence, this gives the correct variational energy
+    # - For Extrapolated: The extrapolated dipoles approximate the SCF result
+    coul_energy += -0.5 * torch.dot(ind_dipoles, efield_static)
 
     return coul_energy

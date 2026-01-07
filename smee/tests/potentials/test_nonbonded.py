@@ -7,6 +7,8 @@ import openmm.unit
 import pytest
 import torch
 
+from tholedipoleplugin import TholeDipoleForce
+
 import smee
 import smee.converters
 import smee.converters.openmm
@@ -45,16 +47,16 @@ def _compute_openmm_energy(
     omm_forces = smee.converters.convert_to_openmm_force(potential, system)
     omm_system = smee.converters.openmm.create_openmm_system(system, None)
 
-    # Handle polarization type for AmoebaMultipoleForce
+    # Handle polarization type for TholeDipoleForce
     if polarization_type is not None:
         for omm_force in omm_forces:
-            if isinstance(omm_force, openmm.AmoebaMultipoleForce):
+            if isinstance(omm_force, TholeDipoleForce):
                 if polarization_type == "direct":
-                    omm_force.setPolarizationType(openmm.AmoebaMultipoleForce.Direct)
+                    omm_force.setPolarizationType(TholeDipoleForce.Direct)
                 elif polarization_type == "mutual":
-                    omm_force.setPolarizationType(openmm.AmoebaMultipoleForce.Mutual)
+                    omm_force.setPolarizationType(TholeDipoleForce.Mutual)
                 elif polarization_type == "extrapolated":
-                    omm_force.setPolarizationType(openmm.AmoebaMultipoleForce.Extrapolated)
+                    omm_force.setPolarizationType(TholeDipoleForce.Extrapolated)
                 else:
                     raise ValueError(f"Unknown polarization_type: {polarization_type}")
 
@@ -75,18 +77,19 @@ def _compute_openmm_energy(
     omm_energy = omm_context.getState(getEnergy=True).getPotentialEnergy()
     omm_energy = omm_energy.value_in_unit(openmm.unit.kilocalories_per_mole)
 
-    # Get induced dipoles
+    # Get induced dipoles from TholeDipoleForce
     try:
-        amoeba_force = None
+        thole_force = None
         for force in omm_forces:
-            if isinstance(force, openmm.AmoebaMultipoleForce):
-                amoeba_force = force
+            if isinstance(force, TholeDipoleForce):
+                thole_force = force
                 break
 
-        if amoeba_force:
-            induced_dipoles = amoeba_force.getInducedDipoles(omm_context)
+        if thole_force:
+            induced_dipoles = thole_force.getInducedDipoles(omm_context)
 
-            conversion_factor = 182.26
+            # Convert from e·nm to e·Å (multiply by 10)
+            conversion_factor = 10.0
             induced_dipoles_angstrom = [[d * conversion_factor for d in dipole] for dipole in induced_dipoles]
             print(f"\nOpenMM induced dipoles (e·Å):")
             for i, dipole in enumerate(induced_dipoles_angstrom):
@@ -901,10 +904,10 @@ def print_debug_info_multipole(energy: torch.Tensor,
         print(f"SMEE Topology {idx}")
         print(f"Assignment Matrix {topology.parameters[es_potential.type].assignment_matrix.to_dense()}")
 
-    amoeba_force = None
+    thole_force = None
     for force in omm_forces:
-        if isinstance(force, openmm.AmoebaMultipoleForce):
-            amoeba_force = force
+        if isinstance(force, TholeDipoleForce):
+            thole_force = force
             break
 
-    print(amoeba_force)
+    print(thole_force)
