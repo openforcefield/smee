@@ -14160,8 +14160,8 @@ packages:
   timestamp: 1756274982526
 - pypi: ./
   name: smee
-  version: 0.1.dev107+gaca69b9da.d20260112
-  sha256: f120e5ee932e3c92b32cb308332ee24a163d1c2fcfa088149e8e44acfd1b72a6
+  version: 0.1.dev111+gbafb0f6ff.d20260112
+  sha256: c98052e467d23e856205fc4cc8ce02c68598e684ada9237875dfdbcbd9b504bd
   requires_python: '>=3.10'
   editable: true
 - conda: https://conda.anaconda.org/conda-forge/noarch/smirnoff-plugins-2024.07.0-pyhd8ed1ab_1.conda

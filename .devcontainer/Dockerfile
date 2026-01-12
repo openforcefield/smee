@@ -1,5 +1,4 @@
-FROM --platform=linux/x86_64 condaforge/mambaforge:latest
+FROM --platform=linux/x86_64 ghcr.io/prefix-dev/pixi:latest
 
-RUN    apt update                               \
-    && apt install -y git make build-essentials \
-    && rm -rf /var/lib/apt/lists/*
+# Install git (required by setuptools_scm)
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*

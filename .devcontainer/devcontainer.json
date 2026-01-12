@@ -1,4 +1,4 @@
 {
   "build": { "dockerfile": "Dockerfile" },
-  "postCreateCommand": "make env"
+  "postCreateCommand": "pixi install && pixi run pre-commit install"
 }
