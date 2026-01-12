@@ -7,9 +7,15 @@ repos:
 
 -   repo: local
     hooks:
-    -   id: ruff
-        name: Autoformat python code
+    -   id: ruff-check
+        name: Lint python code with ruff
         language: system
-        entry: ruff
+        entry: pixi run ruff
         args: [check]
+        files: \.py$
+    -   id: ruff-format
+        name: Format python code with ruff
+        language: system
+        entry: pixi run ruff
+        args: [format]
         files: \.py$

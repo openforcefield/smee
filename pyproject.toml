@@ -45,3 +45,82 @@ markers = [
     "fe: run free energy regression tests",
 ]
 addopts = "-m 'not fe'"
+
+[tool.pixi.project]
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-64", "osx-arm64"]
+
+[tool.pixi.pypi-dependencies]
+smee = { path = ".", editable = true }
+
+[tool.pixi.dependencies]
+python = ">=3.10"
+pip = "*"
+openff-units = "*"
+openff-toolkit-base = ">=0.9.2"
+openff-interchange-base = ">=0.3.17"
+pytorch = "*"
+nnpops = "*"
+pydantic-units = "*"
+networkx = "*"
+
+[tool.pixi.feature.mm.dependencies]
+openmm = "*"
+python-symengine = "*"
+rdkit = "*"
+packmol = "*"
+numpy = "*"
+msgpack-python = "*"
+
+[tool.pixi.feature.fe.dependencies]
+mdtraj = "*"
+absolv = ">=1.0.1"
+
+[tool.pixi.feature.examples.dependencies]
+jupyter = "*"
+nbconvert = "*"
+nglview = "*"
+smirnoff-plugins = ">=0.0.4"
+
+[tool.pixi.feature.dev.dependencies]
+ambertools = "*"
+scipy = "*"
+setuptools_scm = ">=8"
+pre-commit = "*"
+ruff = "*"
+nbqa = "*"
+pytest = "*"
+pytest-cov = "*"
+pytest-mock = "*"
+codecov = "*"
+
+[tool.pixi.feature.docs.dependencies]
+mkdocs = "*"
+mkdocs-material = "*"
+mkdocs-gen-files = "*"
+mkdocs-literate-nav = "*"
+mkdocs-jupyter = "*"
+mkdocstrings = "*"
+mkdocstrings-python = ">=1.10.8"
+griffe-pydantic = "*"
+black = "*"
+mike = "*"
+
+[tool.pixi.feature.pydantic-2.dependencies]
+pydantic = ">=2.0"
+
+[tool.pixi.feature.pydantic-1.dependencies]
+pydantic = "<2.0"
+
+[tool.pixi.environments]
+default = { features = ["mm", "fe", "examples", "dev", "docs", "pydantic-2"] }
+# The fe feature is excluded when pydantic < 2 as femto (used by absolv) needs pydantic >= 2
+pydantic-1 = { features = ["mm", "examples", "dev", "docs", "pydantic-1"] }
+
+[tool.pixi.tasks]
+lint = "ruff check smee examples"
+format = { cmd = "ruff format smee examples && ruff check --fix --select I smee examples" }
+test = "pytest -v --cov=smee --cov-append --cov-report=xml --color=yes smee/tests/"
+test-examples = "jupyter nbconvert --to notebook --execute examples/*.ipynb"
+docs = "mkdocs build"
+docs-serve = "mkdocs serve"

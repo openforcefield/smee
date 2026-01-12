@@ -138,10 +138,10 @@ def _to_residue(
             type="localCoords",
             siteName=f"X{v_site_idx + 1}",
             **parent_names,
-            **{f"wo{i+1}": str(weight_origin[i].item()) for i in range(3)},
-            **{f"wx{i+1}": str(weight_x[i].item()) for i in range(3)},
-            **{f"wy{i+1}": str(weight_y[i].item()) for i in range(3)},
-            **{f"p{i+1}": str(local_frame_coords[0, i].item()) for i in range(3)},
+            **{f"wo{i + 1}": str(weight_origin[i].item()) for i in range(3)},
+            **{f"wx{i + 1}": str(weight_x[i].item()) for i in range(3)},
+            **{f"wy{i + 1}": str(weight_y[i].item()) for i in range(3)},
+            **{f"p{i + 1}": str(local_frame_coords[0, i].item()) for i in range(3)},
         )
 
     return residues_xml

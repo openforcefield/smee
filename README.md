@@ -16,12 +16,12 @@
 
 ---
 
-The `smee` framework aims to offer a simple API for differentiably evaluating the energy of [SMIRNOFF](https://openforcefield.github.io/standards/standards/smirnoff/) 
+The `smee` framework aims to offer a simple API for differentiably evaluating the energy of [SMIRNOFF](https://openforcefield.github.io/standards/standards/smirnoff/)
 force fields applied to molecules using `pytorch`.
 
-The package currently supports evaluating the energy of force fields that contain: 
+The package currently supports evaluating the energy of force fields that contain:
 
-* `Bonds`, `Angles`, `ProperTorsions` and `ImproperTorsions` 
+* `Bonds`, `Angles`, `ProperTorsions` and `ImproperTorsions`
 * `vdW`, `Electrostatics`, `ToolkitAM1BCC`, `LibraryCharges`
 * `VirtualSites`
 
@@ -33,13 +33,25 @@ It further supports a number of functional forms included in `smirnoff-plugins`,
 
 ## Installation
 
-This package can be installed using `conda` (or `mamba`, a faster version of `conda`):
+This package can be installed using `pixi`:
+
+```shell
+pixi add smee
+```
+
+or using `conda` / `mamba`:
 
 ```shell
 mamba install -c conda-forge smee
 ```
 
 The example notebooks further require you install `jupyter`, `nglview`, and `smirnoff-plugins`:
+
+```shell
+pixi add jupyter nglview "smirnoff-plugins >=0.0.4"
+```
+
+or with conda/mamba:
 
 ```shell
 mamba install -c conda-forge jupyter nglview "smirnoff-plugins >=0.0.4"

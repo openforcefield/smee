@@ -12,26 +12,26 @@ jobs:
   test:
 
     runs-on: ubuntu-latest
-    container: condaforge/mambaforge:latest
 
     steps:
     - uses: actions/checkout@v3.3.0
 
-    - name: Setup Conda Environment
+    - name: Setup pixi
+      uses: prefix-dev/setup-pixi@v0.8.1
+      with:
+        pixi-version: v0.37.0
+        cache: true
+
+    - name: Run tests with pydantic >=2
       run: |
-        apt update && apt install -y git make
+        pixi run lint
+        pixi run test
+        pixi run test-examples
+        pixi run docs
 
-        make env
-        make lint
-        make test
-        make test-examples
-        make docs
-
-        # TODO: Remove this once pydantic 1.0 support is dropped
-        #       We remove absolv as femto needs pydantic >=2
-        mamba remove  --name smee --yes "absolv"
-        mamba install --name smee --yes "pydantic <2"
-        make test
+    - name: Run tests with pydantic <2)
+      run: |
+        pixi run --environment pydantic-1 test
 
     - name: CodeCov
       uses: codecov/codecov-action@v4.1.1

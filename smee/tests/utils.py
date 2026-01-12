@@ -116,9 +116,9 @@ def _parameter_key_to_idx(potential: smee.TensorPotential, key: str):
     return next(iter(i for i, k in enumerate(potential.parameter_keys) if k.id == key))
 
 
-def system_with_exceptions() -> (
-    tuple[smee.TensorSystem, smee.TensorPotential, dict[str, LJParam]]
-):
+def system_with_exceptions() -> tuple[
+    smee.TensorSystem, smee.TensorPotential, dict[str, LJParam]
+]:
     ff = openff.toolkit.ForceField()
 
     kcal = openff.units.unit.kilocalorie / openff.units.unit.mole
