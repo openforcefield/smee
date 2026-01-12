@@ -23,11 +23,6 @@ jobs:
         pixi-version: v0.62.2
         cache: true
 
-      cache: true
-      auth-host: prefix.dev
-      auth-token: ${{ secrets.PREFIX_DEV_TOKEN }}
-
-
     - name: Run tests with pydantic >=2
       run: |
         pixi run lint
