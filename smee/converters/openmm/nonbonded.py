@@ -676,14 +676,17 @@ def convert_multipole_potential(
                     atom_y = -1
                     polarity = 0.0
 
+                # The axis atom indices in the parameters are now actual 0-based topology indices
+                # (resolved from SMIRKS indices during OpenFF conversion). We just need to
+                # add the idx_offset for the current molecule copy.
                 force.addParticle(
                     charge,
                     dipole,
                     polarity,
                     axis_type,
-                    atom_z + idx_offset if atom_z >= 0 else -1,
-                    atom_x + idx_offset if atom_x >= 0 else -1,
-                    atom_y + idx_offset if atom_y >= 0 else -1,
+                    int(atom_z) + idx_offset if atom_z >= 0 else -1,
+                    int(atom_x) + idx_offset if atom_x >= 0 else -1,
+                    int(atom_y) + idx_offset if atom_y >= 0 else -1,
                 )
 
             # Set up covalent maps (TholeDipole uses 4 types: Covalent12-15)

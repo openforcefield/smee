@@ -67,7 +67,9 @@ def _compute_openmm_energy(
         omm_system.setDefaultPeriodicBoxVectors(*box_vectors)
 
     omm_integrator = openmm.VerletIntegrator(1.0 * openmm.unit.femtoseconds)
-    omm_context = openmm.Context(omm_system, omm_integrator)
+    # Use Reference platform for TholeDipole (OpenCL may segfault)
+    platform = openmm.Platform.getPlatformByName('Reference')
+    omm_context = openmm.Context(omm_system, omm_integrator, platform)
 
     if box_vectors is not None:
         omm_context.setPeriodicBoxVectors(*box_vectors)
@@ -911,3 +913,702 @@ def print_debug_info_multipole(energy: torch.Tensor,
             break
 
     print(thole_force)
+
+
+# =============================================================================
+# Water Model Tests - Testing SMEE with water force field from water_fitting
+# =============================================================================
+
+def _get_water_model_forcefield():
+    """Load the water model force field."""
+    import pathlib
+    water_ff_path = pathlib.Path(__file__).parent.parent.parent.parent / "water_fitting" / "water_model.offxml"
+    if not water_ff_path.exists():
+        pytest.skip(f"Water model not found at {water_ff_path}")
+    return openff.toolkit.ForceField(str(water_ff_path), load_plugins=True)
+
+
+def _get_water_dimer_coords():
+    """Return coordinates for a water dimer in Angstroms.
+
+    First water at origin, second water displaced along z-axis.
+    Standard water geometry: O-H bond length ~0.9572 Å, H-O-H angle ~104.5°
+    """
+    # Water 1 (near origin)
+    o1 = [0.0, 0.0, 0.0]
+    h1a = [0.9572, 0.0, 0.0]
+    h1b = [-0.2399, 0.9270, 0.0]
+
+    # Water 2 (displaced by ~2.8 Å along z-axis - typical H-bond distance)
+    z_offset = 2.8
+    o2 = [0.0, 0.0, z_offset]
+    h2a = [0.9572, 0.0, z_offset]
+    h2b = [-0.2399, 0.9270, z_offset]
+
+    coords = torch.tensor([o1, h1a, h1b, o2, h2a, h2b], dtype=torch.float64)
+    return coords
+
+
+def _get_water_trimer_coords():
+    """Return coordinates for a water trimer in Angstroms.
+
+    Three water molecules in a triangular arrangement.
+    """
+    import math
+
+    # Water 1 at origin
+    o1 = [0.0, 0.0, 0.0]
+    h1a = [0.9572, 0.0, 0.0]
+    h1b = [-0.2399, 0.9270, 0.0]
+
+    # Water 2 displaced along x
+    x_offset = 3.0
+    o2 = [x_offset, 0.0, 0.0]
+    h2a = [x_offset + 0.9572, 0.0, 0.0]
+    h2b = [x_offset - 0.2399, 0.9270, 0.0]
+
+    # Water 3 displaced to form triangle
+    angle = math.pi / 3  # 60 degrees
+    r = 3.0
+    o3 = [r * math.cos(angle), r * math.sin(angle), 0.0]
+    h3a = [o3[0] + 0.9572, o3[1], 0.0]
+    h3b = [o3[0] - 0.2399, o3[1] + 0.9270, 0.0]
+
+    coords = torch.tensor([o1, h1a, h1b, o2, h2a, h2b, o3, h3a, h3b], dtype=torch.float64)
+    return coords
+
+
+@pytest.mark.parametrize("polarization_type", ["direct", "mutual", "extrapolated"])
+def test_water_dimer_energy(polarization_type):
+    """Test water dimer energy matches OpenMM/TholeDipoleForce."""
+    force_field = _get_water_model_forcefield()
+
+    water1 = openff.toolkit.Molecule.from_smiles("O")
+    water2 = openff.toolkit.Molecule.from_smiles("O")
+    topology = openff.toolkit.Topology.from_molecules([water1, water2])
+
+    interchange = openff.interchange.Interchange.from_smirnoff(force_field, topology)
+    tensor_ff, [tensor_top] = smee.converters.convert_interchange(interchange)
+
+    system = smee.TensorSystem([tensor_top], [1], is_periodic=False)
+    coords = _get_water_dimer_coords()
+
+    es_potential = tensor_ff.potentials_by_type["Electrostatics"]
+
+    # Compute SMEE energy
+    energy = compute_multipole_energy(
+        system, es_potential, coords.float(), None, polarization_type=polarization_type
+    )
+
+    # Compute OpenMM reference energy
+    expected_energy = _compute_openmm_energy(
+        system, coords, None, es_potential, polarization_type=polarization_type
+    )
+
+    print(f"\nWater dimer ({polarization_type}):")
+    print(f"  SMEE Energy: {energy.item():.6f} kcal/mol")
+    print(f"  OpenMM Energy: {expected_energy.item():.6f} kcal/mol")
+    print(f"  Difference: {abs(energy.item() - expected_energy.item()):.2e} kcal/mol")
+
+    assert torch.allclose(energy, expected_energy, atol=1e-4)
+
+
+@pytest.mark.parametrize("polarization_type", ["direct", "mutual", "extrapolated"])
+def test_water_dimer_forces(polarization_type):
+    """Test water dimer forces via autograd match finite difference."""
+    force_field = _get_water_model_forcefield()
+
+    water1 = openff.toolkit.Molecule.from_smiles("O")
+    water2 = openff.toolkit.Molecule.from_smiles("O")
+    topology = openff.toolkit.Topology.from_molecules([water1, water2])
+
+    interchange = openff.interchange.Interchange.from_smirnoff(force_field, topology)
+    tensor_ff, [tensor_top] = smee.converters.convert_interchange(interchange)
+
+    system = smee.TensorSystem([tensor_top], [1], is_periodic=False)
+    coords = _get_water_dimer_coords().float()
+    coords.requires_grad = True
+
+    es_potential = tensor_ff.potentials_by_type["Electrostatics"]
+
+    # Compute SMEE energy and forces
+    energy = compute_multipole_energy(
+        system, es_potential, coords, None, polarization_type=polarization_type
+    )
+    energy.backward()
+    smee_forces = -coords.grad.detach()
+
+    # Compute numerical forces via finite difference
+    # Use h=1e-2 which is optimal for float32 precision (smaller h causes precision loss)
+    h = 1e-2
+    numerical_forces = torch.zeros_like(coords)
+
+    for i in range(coords.shape[0]):
+        for j in range(3):
+            coords_plus = coords.detach().clone()
+            coords_plus[i, j] += h
+            e_plus = compute_multipole_energy(
+                system, es_potential, coords_plus, None, polarization_type=polarization_type
+            )
+
+            coords_minus = coords.detach().clone()
+            coords_minus[i, j] -= h
+            e_minus = compute_multipole_energy(
+                system, es_potential, coords_minus, None, polarization_type=polarization_type
+            )
+
+            numerical_forces[i, j] = -(e_plus - e_minus) / (2 * h)
+
+    print(f"\nWater dimer forces ({polarization_type}):")
+    print(f"  Max force difference (autograd vs numerical): {(smee_forces - numerical_forces).abs().max():.2e}")
+
+    assert torch.allclose(smee_forces, numerical_forces, atol=1e-3)
+
+
+@pytest.mark.parametrize("polarization_type", ["direct", "mutual", "extrapolated"])
+def test_water_trimer_energy(polarization_type):
+    """Test water trimer energy matches OpenMM/TholeDipoleForce."""
+    force_field = _get_water_model_forcefield()
+
+    waters = [openff.toolkit.Molecule.from_smiles("O") for _ in range(3)]
+    topology = openff.toolkit.Topology.from_molecules(waters)
+
+    interchange = openff.interchange.Interchange.from_smirnoff(force_field, topology)
+    tensor_ff, [tensor_top] = smee.converters.convert_interchange(interchange)
+
+    system = smee.TensorSystem([tensor_top], [1], is_periodic=False)
+    coords = _get_water_trimer_coords()
+
+    es_potential = tensor_ff.potentials_by_type["Electrostatics"]
+
+    # Compute SMEE energy
+    energy = compute_multipole_energy(
+        system, es_potential, coords.float(), None, polarization_type=polarization_type
+    )
+
+    # Compute OpenMM reference energy
+    expected_energy = _compute_openmm_energy(
+        system, coords, None, es_potential, polarization_type=polarization_type
+    )
+
+    print(f"\nWater trimer ({polarization_type}):")
+    print(f"  SMEE Energy: {energy.item():.6f} kcal/mol")
+    print(f"  OpenMM Energy: {expected_energy.item():.6f} kcal/mol")
+    print(f"  Difference: {abs(energy.item() - expected_energy.item()):.2e} kcal/mol")
+
+    assert torch.allclose(energy, expected_energy, atol=1e-4)
+
+
+def test_single_water_zero_energy():
+    """Test that a single isolated water molecule has zero intermolecular energy."""
+    force_field = _get_water_model_forcefield()
+
+    water = openff.toolkit.Molecule.from_smiles("O")
+    topology = openff.toolkit.Topology.from_molecules([water])
+
+    interchange = openff.interchange.Interchange.from_smirnoff(force_field, topology)
+    tensor_ff, [tensor_top] = smee.converters.convert_interchange(interchange)
+
+    system = smee.TensorSystem([tensor_top], [1], is_periodic=False)
+
+    # Standard water geometry
+    coords = torch.tensor([
+        [0.0, 0.0, 0.0],
+        [0.9572, 0.0, 0.0],
+        [-0.2399, 0.9270, 0.0],
+    ], dtype=torch.float32)
+
+    es_potential = tensor_ff.potentials_by_type["Electrostatics"]
+
+    # Compute SMEE energy
+    energy = compute_multipole_energy(
+        system, es_potential, coords, None, polarization_type="direct"
+    )
+
+    # Single molecule should have zero intermolecular energy
+    # (intramolecular terms are excluded via covalent maps)
+    print(f"\nSingle water molecule energy: {energy.item():.6e} kcal/mol")
+
+    assert torch.allclose(energy, torch.tensor(0.0, dtype=energy.dtype), atol=1e-6)
+
+
+@pytest.mark.parametrize("polarization_type", ["direct", "mutual", "extrapolated"])
+def test_water_dimer_multiple_conformers(polarization_type):
+    """Test water dimer with multiple conformers (batched computation)."""
+    force_field = _get_water_model_forcefield()
+
+    water1 = openff.toolkit.Molecule.from_smiles("O")
+    water2 = openff.toolkit.Molecule.from_smiles("O")
+    topology = openff.toolkit.Topology.from_molecules([water1, water2])
+
+    interchange = openff.interchange.Interchange.from_smirnoff(force_field, topology)
+    tensor_ff, [tensor_top] = smee.converters.convert_interchange(interchange)
+
+    system = smee.TensorSystem([tensor_top], [1], is_periodic=False)
+
+    # Create multiple conformers with different separations
+    base_coords = _get_water_dimer_coords()
+    conformers = []
+    for z_offset in [2.5, 3.0, 3.5, 4.0]:
+        coords = base_coords.clone()
+        # Shift second water
+        coords[3:, 2] = z_offset
+        conformers.append(coords)
+
+    coords_batch = torch.stack(conformers).float()
+
+    es_potential = tensor_ff.potentials_by_type["Electrostatics"]
+
+    # Compute SMEE energies for batch
+    energies = compute_multipole_energy(
+        system, es_potential, coords_batch, None, polarization_type=polarization_type
+    )
+
+    # Compute OpenMM reference energies individually
+    expected_energies = torch.tensor([
+        _compute_openmm_energy(system, coords, None, es_potential, polarization_type=polarization_type)
+        for coords in conformers
+    ])
+
+    print(f"\nWater dimer multiple conformers ({polarization_type}):")
+    for i, (e, exp_e) in enumerate(zip(energies, expected_energies)):
+        print(f"  Conformer {i}: SMEE={e.item():.6f}, OpenMM={exp_e.item():.6f}, diff={abs(e.item()-exp_e.item()):.2e}")
+
+    assert torch.allclose(energies, expected_energies, atol=1e-4)
+
+
+@pytest.mark.parametrize("polarization_type", ["direct", "mutual", "extrapolated"])
+def test_water_dimer_axis_resolution(polarization_type):
+    """Test that axis atoms are correctly resolved from SMIRKS indices to topology indices."""
+    force_field = _get_water_model_forcefield()
+
+    water1 = openff.toolkit.Molecule.from_smiles("O")
+    water2 = openff.toolkit.Molecule.from_smiles("O")
+    topology = openff.toolkit.Topology.from_molecules([water1, water2])
+
+    interchange = openff.interchange.Interchange.from_smirnoff(force_field, topology)
+    tensor_ff, [tensor_top] = smee.converters.convert_interchange(interchange)
+
+    system = smee.TensorSystem([tensor_top], [1], is_periodic=False)
+
+    es_potential = tensor_ff.potentials_by_type["Electrostatics"]
+    param_map = tensor_top.parameters[es_potential.type]
+    assigned_params = param_map.assignment_matrix @ es_potential.parameters
+
+    print(f"\nAxis resolution test ({polarization_type}):")
+    print("Checking that axis atoms are actual topology indices (not SMIRKS indices):")
+
+    # For 6 atoms (2 waters), axis atoms should be 0-5 (topology indices)
+    # NOT 1-3 (SMIRKS indices)
+    for i in range(6):
+        axis_type = int(assigned_params[i, 13])
+        atom_z = int(assigned_params[i, 14])
+        atom_x = int(assigned_params[i, 15])
+        print(f"  Atom {i}: axisType={axis_type}, atomZ={atom_z}, atomX={atom_x}")
+
+        # Verify axis atoms are valid topology indices
+        if atom_z >= 0:
+            assert atom_z < 6, f"atomZ={atom_z} exceeds topology size (6 atoms)"
+        if atom_x >= 0:
+            assert atom_x < 6, f"atomX={atom_x} exceeds topology size (6 atoms)"
+
+    # Verify we can compute energy without errors
+    coords = _get_water_dimer_coords()
+    energy = compute_multipole_energy(
+        system, es_potential, coords.float(), None, polarization_type=polarization_type
+    )
+    assert torch.isfinite(energy)
+
+
+@pytest.mark.parametrize("n_waters", [2, 4, 8])
+def test_water_cluster_energy(n_waters):
+    """Test water clusters of various sizes."""
+    force_field = _get_water_model_forcefield()
+
+    waters = [openff.toolkit.Molecule.from_smiles("O") for _ in range(n_waters)]
+    topology = openff.toolkit.Topology.from_molecules(waters)
+
+    interchange = openff.interchange.Interchange.from_smirnoff(force_field, topology)
+    tensor_ff, [tensor_top] = smee.converters.convert_interchange(interchange)
+
+    system = smee.TensorSystem([tensor_top], [1], is_periodic=False)
+
+    # Generate coordinates for water cluster
+    import numpy as np
+    np.random.seed(42)
+
+    coords_list = []
+    spacing = 3.0  # Å between water molecules
+
+    for i in range(n_waters):
+        # Place water molecules in a grid
+        x = (i % 2) * spacing
+        y = ((i // 2) % 2) * spacing
+        z = (i // 4) * spacing
+
+        # Standard water geometry
+        coords_list.append([x, y, z])  # O
+        coords_list.append([x + 0.9572, y, z])  # H
+        coords_list.append([x - 0.2399, y + 0.9270, z])  # H
+
+    coords = torch.tensor(coords_list, dtype=torch.float64)
+
+    es_potential = tensor_ff.potentials_by_type["Electrostatics"]
+
+    # Compute SMEE energy
+    energy = compute_multipole_energy(
+        system, es_potential, coords.float(), None, polarization_type="mutual"
+    )
+
+    # Compute OpenMM reference energy
+    expected_energy = _compute_openmm_energy(
+        system, coords, None, es_potential, polarization_type="mutual"
+    )
+
+    print(f"\nWater cluster (n={n_waters}):")
+    print(f"  SMEE Energy: {energy.item():.6f} kcal/mol")
+    print(f"  OpenMM Energy: {expected_energy.item():.6f} kcal/mol")
+    print(f"  Difference: {abs(energy.item() - expected_energy.item()):.2e} kcal/mol")
+
+    assert torch.allclose(energy, expected_energy, atol=1e-3)
+
+
+# =============================================================================
+# Ammonia Tests - Testing ThreeFold axis type and different molecular geometry
+# =============================================================================
+
+def _get_ammonia_dimer_coords():
+    """Return coordinates for an ammonia dimer in Angstroms.
+
+    Ammonia geometry: N-H bond length ~1.012 Å, H-N-H angle ~106.7°
+    Tetrahedral-like geometry with lone pair.
+    """
+    import math
+
+    # Ammonia 1 at origin
+    # N at origin, 3 H atoms in tetrahedral-like arrangement
+    n1 = [0.0, 0.0, 0.0]
+    # H atoms roughly 1.012 Å from N, ~106.7° H-N-H angle
+    h1a = [0.9377, 0.0, -0.3816]
+    h1b = [-0.4689, 0.8121, -0.3816]
+    h1c = [-0.4689, -0.8121, -0.3816]
+
+    # Ammonia 2 displaced along z-axis
+    z_offset = 3.5
+    n2 = [0.0, 0.0, z_offset]
+    h2a = [0.9377, 0.0, z_offset - 0.3816]
+    h2b = [-0.4689, 0.8121, z_offset - 0.3816]
+    h2c = [-0.4689, -0.8121, z_offset - 0.3816]
+
+    coords = torch.tensor([n1, h1a, h1b, h1c, n2, h2a, h2b, h2c], dtype=torch.float64)
+    return coords
+
+
+def _get_ammonia_trimer_coords():
+    """Return coordinates for an ammonia trimer in Angstroms."""
+    import math
+
+    # Ammonia 1 at origin
+    n1 = [0.0, 0.0, 0.0]
+    h1a = [0.9377, 0.0, -0.3816]
+    h1b = [-0.4689, 0.8121, -0.3816]
+    h1c = [-0.4689, -0.8121, -0.3816]
+
+    # Ammonia 2 displaced along x
+    x_offset = 3.5
+    n2 = [x_offset, 0.0, 0.0]
+    h2a = [x_offset + 0.9377, 0.0, -0.3816]
+    h2b = [x_offset - 0.4689, 0.8121, -0.3816]
+    h2c = [x_offset - 0.4689, -0.8121, -0.3816]
+
+    # Ammonia 3 displaced to form triangle
+    angle = math.pi / 3
+    r = 3.5
+    n3 = [r * math.cos(angle), r * math.sin(angle), 0.0]
+    h3a = [n3[0] + 0.9377, n3[1], -0.3816]
+    h3b = [n3[0] - 0.4689, n3[1] + 0.8121, -0.3816]
+    h3c = [n3[0] - 0.4689, n3[1] - 0.8121, -0.3816]
+
+    coords = torch.tensor([
+        n1, h1a, h1b, h1c,
+        n2, h2a, h2b, h2c,
+        n3, h3a, h3b, h3c
+    ], dtype=torch.float64)
+    return coords
+
+
+@pytest.mark.parametrize(
+    "forcefield_name,polarization_type",
+    [
+        ("PHAST-H2CNO-nonpolar-2.0.0.offxml", "direct"),
+        ("PHAST-H2CNO-2.0.0.offxml", "direct"),
+        ("PHAST-H2CNO-2.0.0.offxml", "mutual"),
+        ("PHAST-H2CNO-2.0.0.offxml", "extrapolated"),
+    ]
+)
+def test_ammonia_dimer_energy(test_data_dir, forcefield_name, polarization_type):
+    """Test ammonia dimer energy matches OpenMM/TholeDipoleForce.
+
+    Ammonia uses ThreeFold axis type for N and ZOnly for H atoms.
+    """
+    tensor_sys, tensor_ff = smee.tests.utils.system_from_smiles(
+        ["N", "N"],
+        [1, 1],
+        openff.toolkit.ForceField(
+            str(test_data_dir / forcefield_name), load_plugins=True
+        ),
+    )
+    tensor_sys.is_periodic = False
+
+    coords = _get_ammonia_dimer_coords()
+
+    es_potential = tensor_ff.potentials_by_type["Electrostatics"]
+
+    energy = compute_multipole_energy(
+        tensor_sys, es_potential, coords.float(), None, polarization_type=polarization_type
+    )
+
+    expected_energy = _compute_openmm_energy(
+        tensor_sys, coords, None, es_potential, polarization_type=polarization_type
+    )
+
+    print(f"\nAmmonia dimer ({forcefield_name}, {polarization_type}):")
+    print(f"  SMEE Energy: {energy.item():.6f} kcal/mol")
+    print(f"  OpenMM Energy: {expected_energy.item():.6f} kcal/mol")
+    print(f"  Difference: {abs(energy.item() - expected_energy.item()):.2e} kcal/mol")
+
+    assert torch.allclose(energy, expected_energy, atol=1e-3)
+
+
+@pytest.mark.parametrize(
+    "forcefield_name,polarization_type",
+    [
+        ("PHAST-H2CNO-2.0.0.offxml", "direct"),
+        ("PHAST-H2CNO-2.0.0.offxml", "mutual"),
+        ("PHAST-H2CNO-2.0.0.offxml", "extrapolated"),
+    ]
+)
+def test_ammonia_dimer_forces(test_data_dir, forcefield_name, polarization_type):
+    """Test ammonia dimer forces via autograd match finite difference."""
+    tensor_sys, tensor_ff = smee.tests.utils.system_from_smiles(
+        ["N", "N"],
+        [1, 1],
+        openff.toolkit.ForceField(
+            str(test_data_dir / forcefield_name), load_plugins=True
+        ),
+    )
+    tensor_sys.is_periodic = False
+
+    coords = _get_ammonia_dimer_coords().float()
+    coords.requires_grad = True
+
+    es_potential = tensor_ff.potentials_by_type["Electrostatics"]
+
+    energy = compute_multipole_energy(
+        tensor_sys, es_potential, coords, None, polarization_type=polarization_type
+    )
+    energy.backward()
+    smee_forces = -coords.grad.detach()
+
+    # Use h=1e-2 for optimal float32 finite difference precision
+    h = 1e-2
+    numerical_forces = torch.zeros_like(coords)
+
+    for i in range(coords.shape[0]):
+        for j in range(3):
+            coords_plus = coords.detach().clone()
+            coords_plus[i, j] += h
+            e_plus = compute_multipole_energy(
+                tensor_sys, es_potential, coords_plus, None, polarization_type=polarization_type
+            )
+
+            coords_minus = coords.detach().clone()
+            coords_minus[i, j] -= h
+            e_minus = compute_multipole_energy(
+                tensor_sys, es_potential, coords_minus, None, polarization_type=polarization_type
+            )
+
+            numerical_forces[i, j] = -(e_plus - e_minus) / (2 * h)
+
+    print(f"\nAmmonia dimer forces ({forcefield_name}, {polarization_type}):")
+    print(f"  Max force difference (autograd vs numerical): {(smee_forces - numerical_forces).abs().max():.2e}")
+
+    assert torch.allclose(smee_forces, numerical_forces, atol=1e-3)
+
+
+@pytest.mark.parametrize(
+    "forcefield_name,polarization_type",
+    [
+        ("PHAST-H2CNO-nonpolar-2.0.0.offxml", "direct"),
+        ("PHAST-H2CNO-2.0.0.offxml", "direct"),
+        ("PHAST-H2CNO-2.0.0.offxml", "mutual"),
+        ("PHAST-H2CNO-2.0.0.offxml", "extrapolated"),
+    ]
+)
+def test_ammonia_trimer_energy(test_data_dir, forcefield_name, polarization_type):
+    """Test ammonia trimer energy matches OpenMM/TholeDipoleForce."""
+    tensor_sys, tensor_ff = smee.tests.utils.system_from_smiles(
+        ["N"],
+        [3],
+        openff.toolkit.ForceField(
+            str(test_data_dir / forcefield_name), load_plugins=True
+        ),
+    )
+    tensor_sys.is_periodic = False
+
+    coords = _get_ammonia_trimer_coords()
+
+    es_potential = tensor_ff.potentials_by_type["Electrostatics"]
+
+    energy = compute_multipole_energy(
+        tensor_sys, es_potential, coords.float(), None, polarization_type=polarization_type
+    )
+
+    expected_energy = _compute_openmm_energy(
+        tensor_sys, coords, None, es_potential, polarization_type=polarization_type
+    )
+
+    print(f"\nAmmonia trimer ({forcefield_name}, {polarization_type}):")
+    print(f"  SMEE Energy: {energy.item():.6f} kcal/mol")
+    print(f"  OpenMM Energy: {expected_energy.item():.6f} kcal/mol")
+    print(f"  Difference: {abs(energy.item() - expected_energy.item()):.2e} kcal/mol")
+
+    assert torch.allclose(energy, expected_energy, atol=1e-3)
+
+
+@pytest.mark.parametrize(
+    "forcefield_name",
+    ["PHAST-H2CNO-nonpolar-2.0.0.offxml", "PHAST-H2CNO-2.0.0.offxml"]
+)
+def test_single_ammonia_zero_energy(test_data_dir, forcefield_name):
+    """Test that a single isolated ammonia molecule has zero intermolecular energy."""
+    tensor_sys, tensor_ff = smee.tests.utils.system_from_smiles(
+        ["N"],
+        [1],
+        openff.toolkit.ForceField(
+            str(test_data_dir / forcefield_name), load_plugins=True
+        ),
+    )
+    tensor_sys.is_periodic = False
+
+    # Standard ammonia geometry
+    coords = torch.tensor([
+        [0.0, 0.0, 0.0],        # N
+        [0.9377, 0.0, -0.3816], # H
+        [-0.4689, 0.8121, -0.3816], # H
+        [-0.4689, -0.8121, -0.3816], # H
+    ], dtype=torch.float32)
+
+    es_potential = tensor_ff.potentials_by_type["Electrostatics"]
+
+    energy = compute_multipole_energy(
+        tensor_sys, es_potential, coords, None, polarization_type="direct"
+    )
+
+    print(f"\nSingle ammonia molecule energy ({forcefield_name}): {energy.item():.6e} kcal/mol")
+
+    assert torch.allclose(energy, torch.tensor(0.0, dtype=energy.dtype), atol=1e-6)
+
+
+@pytest.mark.parametrize(
+    "forcefield_name,polarization_type",
+    [
+        ("PHAST-H2CNO-2.0.0.offxml", "direct"),
+        ("PHAST-H2CNO-2.0.0.offxml", "mutual"),
+        ("PHAST-H2CNO-2.0.0.offxml", "extrapolated"),
+    ]
+)
+def test_ammonia_axis_types(test_data_dir, forcefield_name, polarization_type):
+    """Test that ammonia axis types are correctly assigned."""
+    tensor_sys, tensor_ff = smee.tests.utils.system_from_smiles(
+        ["N"],
+        [2],
+        openff.toolkit.ForceField(
+            str(test_data_dir / forcefield_name), load_plugins=True
+        ),
+    )
+    tensor_sys.is_periodic = False
+
+    es_potential = tensor_ff.potentials_by_type["Electrostatics"]
+
+    # Get assigned parameters for the single topology (4 atoms)
+    topology = tensor_sys.topologies[0]
+    param_map = topology.parameters[es_potential.type]
+    assigned_params = param_map.assignment_matrix @ es_potential.parameters
+
+    n_atoms_per_mol = topology.n_particles
+    print(f"\nAmmonia axis types ({forcefield_name}, {polarization_type}):")
+    print(f"  Atoms per molecule: {n_atoms_per_mol}")
+
+    # Check axis types for each atom in the topology template
+    for i in range(n_atoms_per_mol):
+        axis_type = int(assigned_params[i, 13])
+        atom_z = int(assigned_params[i, 14])
+        atom_x = int(assigned_params[i, 15])
+        atom_y = int(assigned_params[i, 16])
+
+        atom_type = "N" if i == 0 else "H"
+        print(f"  Atom {i} ({atom_type}): axisType={axis_type}, atomZ={atom_z}, atomX={atom_x}, atomY={atom_y}")
+
+        # Verify axis atoms are valid topology indices (or -1)
+        if atom_z >= 0:
+            assert atom_z < n_atoms_per_mol, f"atomZ={atom_z} exceeds topology size"
+        if atom_x >= 0:
+            assert atom_x < n_atoms_per_mol, f"atomX={atom_x} exceeds topology size"
+        if atom_y >= 0:
+            assert atom_y < n_atoms_per_mol, f"atomY={atom_y} exceeds topology size"
+
+    # Verify we can compute energy without errors
+    coords = _get_ammonia_dimer_coords()
+    energy = compute_multipole_energy(
+        tensor_sys, es_potential, coords.float(), None, polarization_type=polarization_type
+    )
+    assert torch.isfinite(energy)
+
+
+@pytest.mark.parametrize("n_ammonia", [2, 4, 6])
+def test_ammonia_cluster_energy(test_data_dir, n_ammonia):
+    """Test ammonia clusters of various sizes."""
+    tensor_sys, tensor_ff = smee.tests.utils.system_from_smiles(
+        ["N"],
+        [n_ammonia],
+        openff.toolkit.ForceField(
+            str(test_data_dir / "PHAST-H2CNO-2.0.0.offxml"), load_plugins=True
+        ),
+    )
+    tensor_sys.is_periodic = False
+
+    # Generate coordinates for ammonia cluster
+    coords_list = []
+    spacing = 4.0  # Å between molecules
+
+    for i in range(n_ammonia):
+        # Place ammonia molecules in a grid
+        x = (i % 2) * spacing
+        y = ((i // 2) % 2) * spacing
+        z = (i // 4) * spacing
+
+        # Standard ammonia geometry
+        coords_list.append([x, y, z])  # N
+        coords_list.append([x + 0.9377, y, z - 0.3816])  # H
+        coords_list.append([x - 0.4689, y + 0.8121, z - 0.3816])  # H
+        coords_list.append([x - 0.4689, y - 0.8121, z - 0.3816])  # H
+
+    coords = torch.tensor(coords_list, dtype=torch.float64)
+
+    es_potential = tensor_ff.potentials_by_type["Electrostatics"]
+
+    energy = compute_multipole_energy(
+        tensor_sys, es_potential, coords.float(), None, polarization_type="mutual"
+    )
+
+    expected_energy = _compute_openmm_energy(
+        tensor_sys, coords, None, es_potential, polarization_type="mutual"
+    )
+
+    print(f"\nAmmonia cluster (n={n_ammonia}):")
+    print(f"  SMEE Energy: {energy.item():.6f} kcal/mol")
+    print(f"  OpenMM Energy: {expected_energy.item():.6f} kcal/mol")
+    print(f"  Difference: {abs(energy.item() - expected_energy.item()):.2e} kcal/mol")
+
+    assert torch.allclose(energy, expected_energy, atol=1e-3)

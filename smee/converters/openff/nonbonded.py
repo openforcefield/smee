@@ -318,7 +318,7 @@ def convert_multipole(
         (
             "dipoleX", "dipoleY", "dipoleZ",
             "quadrupoleXX", "quadrupoleXY", "quadrupoleXZ",
-            "quadrupoleYX", "quadrupoleYY", "quadrupoleYZ", 
+            "quadrupoleYX", "quadrupoleYY", "quadrupoleYZ",
             "quadrupoleZX", "quadrupoleZY", "quadrupoleZZ",
             "axisType", "multipoleAtomZ", "multipoleAtomX", "multipoleAtomY",
             "thole", "dampingFactor", "polarity"
@@ -353,26 +353,142 @@ def convert_multipole(
     # Handle different numbers of columns between charge and polarizability potentials
     n_chg_cols = potential_chg.parameters.shape[1]
     n_pol_cols = potential_pol.parameters.shape[1]
-    
+
     # Pad charge parameters with zeros for the new polarizability columns
     parameters_chg = torch.cat(
         (potential_chg.parameters, torch.zeros(potential_chg.parameters.shape[0], n_pol_cols, dtype=potential_chg.parameters.dtype)), dim=1
     )
-    parameters_pol = potential_pol.parameters
-    parameters_pol[:, 17] = parameters_pol[:, 18]**(1/6)
-    # Pad polarizability parameters with zeros for the charge columns
+
+    # Resolve multipole axis atoms from SMIRKS indices to actual topology indices.
+    # The OFFXML stores multipoleAtomZ/X/Y as 1-based SMIRKS atom map numbers.
+    # We need to resolve these to actual 0-based topology indices for each atom.
+    # Columns in potential_pol.parameters: 13=multipoleAtomZ, 14=multipoleAtomX, 15=multipoleAtomY
+
+    parameter_key_to_idx = {
+        key: i for i, key in enumerate(potential_pol.parameter_keys)
+    }
+
+    all_resolved_pol_params = []
+    resolved_parameter_maps_pol = []
+
+    for handler, topology, v_site_map, param_map_pol in zip(
+        handlers, topologies, v_site_maps, parameter_maps_pol, strict=True
+    ):
+        n_atoms = topology.n_atoms
+
+        # Create per-atom resolved parameters for multipoles
+        # Each atom gets its own parameter row with resolved axis indices
+        resolved_params = []
+
+        for atom_idx in range(n_atoms):
+            # Find the topology_key for this atom
+            matched_key = None
+            matched_param_idx = None
+
+            for topology_key, parameter_key in handler.key_map.items():
+                if isinstance(topology_key, openff.interchange.models.VirtualSiteKey):
+                    continue
+                if topology_key.atom_indices[0] == atom_idx:
+                    matched_key = topology_key
+                    matched_param_idx = parameter_key_to_idx[parameter_key]
+                    break
+
+            if matched_key is None:
+                # No multipole parameters for this atom, create zero row
+                resolved_params.append(torch.zeros(n_pol_cols, dtype=torch.float64))
+                continue
+
+            # Get the base parameters for this atom
+            base_params = potential_pol.parameters[matched_param_idx].clone()
+
+            # Resolve SMIRKS indices to actual topology indices
+            # SMIRKS indices are 1-based, so multipoleAtomZ=2 means atom_indices[1]
+            smirks_atom_z = int(base_params[13])  # multipoleAtomZ
+            smirks_atom_x = int(base_params[14])  # multipoleAtomX
+            smirks_atom_y = int(base_params[15])  # multipoleAtomY
+
+            # Resolve using atom_indices from the match
+            # SMIRKS :N corresponds to atom_indices[N-1]
+            atom_indices = matched_key.atom_indices
+
+            if smirks_atom_z > 0 and smirks_atom_z <= len(atom_indices):
+                base_params[13] = atom_indices[smirks_atom_z - 1]
+            else:
+                base_params[13] = -1
+
+            if smirks_atom_x > 0 and smirks_atom_x <= len(atom_indices):
+                base_params[14] = atom_indices[smirks_atom_x - 1]
+            else:
+                base_params[14] = -1
+
+            if smirks_atom_y > 0 and smirks_atom_y <= len(atom_indices):
+                base_params[15] = atom_indices[smirks_atom_y - 1]
+            else:
+                base_params[15] = -1
+
+            # Compute damping factor from polarity
+            base_params[17] = base_params[18] ** (1/6)
+
+            resolved_params.append(base_params)
+
+        # Stack into a tensor for this topology
+        resolved_params_tensor = torch.stack(resolved_params)
+        all_resolved_pol_params.append(resolved_params_tensor)
+
+        # Create identity-like assignment matrix (each atom maps to its own row)
+        assignment_matrix = torch.eye(n_atoms, dtype=torch.float64).to_sparse()
+        resolved_parameter_maps_pol.append(
+            smee.NonbondedParameterMap(
+                assignment_matrix=assignment_matrix,
+                exclusions=param_map_pol.exclusions,
+                exclusion_scale_idxs=param_map_pol.exclusion_scale_idxs,
+            )
+        )
+
+    # Combine all resolved parameters across topologies into a single tensor
+    # Each topology's parameters are separate, so we need to track offsets
+    total_pol_params = sum(p.shape[0] for p in all_resolved_pol_params)
+
+    # Create combined parameters tensor
+    if all_resolved_pol_params:
+        combined_pol_params = torch.cat(all_resolved_pol_params, dim=0)
+    else:
+        combined_pol_params = torch.zeros((0, n_pol_cols), dtype=torch.float64)
+
+    # Pad with charge columns
     parameters_pol = torch.cat(
-        (torch.zeros(potential_pol.parameters.shape[0], n_chg_cols, dtype=potential_pol.parameters.dtype), potential_pol.parameters), dim=1
+        (torch.zeros(combined_pol_params.shape[0], n_chg_cols, dtype=torch.float64), combined_pol_params), dim=1
     )
+
     potential_chg.parameters = torch.cat((parameters_chg, parameters_pol), dim=0)
 
-    for parameter_map_chg, parameter_map_pol in zip(
-        parameter_maps_chg, parameter_maps_pol, strict=True
-    ):
-        parameter_map_chg.assignment_matrix = torch.block_diag(
-            parameter_map_chg.assignment_matrix.to_dense(),
-            parameter_map_pol.assignment_matrix.to_dense(),
-        ).to_sparse()
+    # Update assignment matrices with proper offsets
+    param_offset = 0
+    for i, (parameter_map_chg, resolved_map_pol) in enumerate(zip(
+        parameter_maps_chg, resolved_parameter_maps_pol, strict=True
+    )):
+        n_chg_params = parameter_map_chg.assignment_matrix.shape[1]
+        n_atoms = resolved_map_pol.assignment_matrix.shape[0]
+
+        # The resolved_map_pol assignment matrix is identity, but we need to offset
+        # the column indices by (n_charge_params + param_offset)
+        pol_assignment_dense = resolved_map_pol.assignment_matrix.to_dense()
+
+        # Create the full assignment matrix
+        n_total_params = parameters_chg.shape[0] + combined_pol_params.shape[0]
+        full_assignment = torch.zeros((n_atoms, n_total_params), dtype=torch.float64)
+
+        # Copy charge assignments
+        chg_assignment = parameter_map_chg.assignment_matrix.to_dense()
+        full_assignment[:, :n_chg_params] = chg_assignment
+
+        # Add multipole assignments with proper offset
+        pol_start_col = parameters_chg.shape[0] + param_offset
+        for atom_idx in range(n_atoms):
+            full_assignment[atom_idx, pol_start_col + atom_idx] = 1.0
+
+        parameter_map_chg.assignment_matrix = full_assignment.to_sparse()
+        param_offset += n_atoms
 
     return potential_chg, parameter_maps_chg
 
