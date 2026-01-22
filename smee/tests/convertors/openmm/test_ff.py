@@ -57,12 +57,26 @@ def test_convert_to_openmm_ffxml(tmp_cwd, with_constraints, smiles):
         switchDistance=8.0 * openmm.unit.angstrom,
         constraints=openmm.app.HBonds if with_constraints else None,
         rigidWater=True,
-        removeCMMotion=False,
+        removeCMMotion=True,
     )
     system_from_off = off_ff.create_openmm_system(off_top)
 
     assert system_from_xml.getNumParticles() == system_from_off.getNumParticles()
-    assert system_from_xml.getNumForces() == system_from_off.getNumForces()
+
+    # Compare number of forces, excluding CMMotionRemover, as the default
+    # behavior of OpenFF Interchange changed in 0.4.1 to include it
+    # (https://github.com/openforcefield/openff-interchange/pull/1133)
+    forces_xml = [
+        f
+        for f in system_from_xml.getForces()
+        if not isinstance(f, openmm.CMMotionRemover)
+    ]
+    forces_off = [
+        f
+        for f in system_from_off.getForces()
+        if not isinstance(f, openmm.CMMotionRemover)
+    ]
+    assert len(forces_xml) == len(forces_off)
 
     assert system_from_xml.getNumConstraints() == system_from_off.getNumConstraints()
 
@@ -114,7 +128,7 @@ def test_convert_to_openmm_ffxml_v_sites(tmp_cwd):
         switchDistance=8.0 * openmm.unit.angstrom,
         constraints=openmm.app.HBonds,
         rigidWater=True,
-        removeCMMotion=False,
+        removeCMMotion=True,
     )
     system_from_off = off_ff.create_openmm_system(off_top)
 

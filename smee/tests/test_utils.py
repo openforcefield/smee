@@ -245,6 +245,11 @@ def test_logsumexp(a, b, dim, keepdim):
         logsumexp(a.numpy(), dim, b if b is None else b.numpy(), keepdim)
     )
 
+    # scipy.logsumexp returns shape (1,) for 0-d inputs with keepdim=True
+    # but we expect shape () for 0-d inputs regardless of keepdim
+    if a.ndim == 0 and expected.ndim == 1:
+        expected = expected.squeeze()
+
     assert actual.shape == expected.shape
     assert torch.allclose(actual.double(), expected.double())
 
