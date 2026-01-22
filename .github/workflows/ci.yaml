@@ -22,9 +22,7 @@ jobs:
       with:
         pixi-version: v0.62.2
         cache: true
-        environments: |
-          cpu
-          pydantic-1-cpu
+        environments: cpu pydantic-1-cpu
 
     - name: Run tests with pydantic >=2
       run: |
