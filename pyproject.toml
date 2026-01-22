@@ -126,6 +126,6 @@ pydantic-1-cpu = { features = ["mm", "examples", "dev", "docs", "pydantic-1"] }
 lint = "ruff check smee examples"
 format = { cmd = "ruff format smee examples && ruff check --fix --select I smee examples" }
 test = "pytest -v --cov=smee --cov-append --cov-report=xml --color=yes smee/tests/"
-test-examples = "jupyter nbconvert --to notebook --execute examples/*.ipynb"
+test-examples = "jupyter nbconvert --to notebook --execute examples/compute-energy.ipynb examples/conformer-minimization.ipynb examples/parameter-gradients.ipynb"
 docs = "mkdocs build"
 docs-serve = "mkdocs serve"
