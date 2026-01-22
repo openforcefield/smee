@@ -25,14 +25,14 @@ jobs:
 
     - name: Run tests with pydantic >=2
       run: |
-        pixi run lint
-        pixi run test
-        pixi run test-examples
-        pixi run docs
+        pixi run --environment cpu lint
+        pixi run --environment cpu test
+        pixi run --environment cpu test-examples
+        pixi run --environment cpu docs
 
     - name: Run tests with pydantic <2)
       run: |
-        pixi run --environment pydantic-1 test
+        pixi run --environment pydantic-1-cpu test
 
     - name: CodeCov
       uses: codecov/codecov-action@v4.1.1

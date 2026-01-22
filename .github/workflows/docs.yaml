@@ -43,4 +43,4 @@ jobs:
         git fetch --all --prune
         git pull origin gh-pages --allow-unrelated-histories
 
-        pixi run mike deploy --push --update-aliases $VERSION
+        pixi run -e cpu mike deploy --push --update-aliases $VERSION
