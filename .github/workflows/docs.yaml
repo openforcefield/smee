@@ -19,6 +19,9 @@ jobs:
       with:
         pixi-version: v0.62.2
         cache: true
+        environments: |
+          cpu
+          pydantic-1-cpu
 
     - name: Determine Version
       shell: bash
