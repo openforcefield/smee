@@ -48,7 +48,7 @@ addopts = "-m 'not fe'"
 
 [tool.pixi.workspace]
 channels = ["conda-forge"]
-platforms = ["linux-64", "osx-64", "osx-arm64"]
+platforms = ["linux-64"]
 
 [tool.pixi.pypi-dependencies]
 smee = { path = ".", editable = true }
@@ -59,13 +59,19 @@ pip = "*"
 openff-units = "*"
 openff-toolkit-base = ">=0.9.2"
 openff-interchange-base = ">=0.3.17"
-pytorch = "*"
 nnpops = "*"
 pydantic-units = "*"
 networkx = "*"
 
+[tool.pixi.feature.cu12.system-requirements]
+cuda = "12"
+
 [tool.pixi.feature.cu12.dependencies]
 cuda-version = "12.*"
+pytorch-gpu = "*"
+
+[tool.pixi.feature.cpu.dependencies]
+pytorch = "*"
 
 [tool.pixi.feature.mm.dependencies]
 openmm = "*"
@@ -117,10 +123,10 @@ pydantic = "<2.0"
 
 [tool.pixi.environments]
 default = { features = ["cu12", "mm", "fe", "examples", "dev", "docs", "pydantic-2"] }
-cpu = { features = ["mm", "fe", "examples", "dev", "docs", "pydantic-2"] }
+cpu = { features = ["cpu", "mm", "fe", "examples", "dev", "docs", "pydantic-2"] }
 # The fe feature is excluded when pydantic < 2 as femto (used by absolv) needs pydantic >= 2
 pydantic-1-cu12 = { features = ["cu12", "mm", "examples", "dev", "docs", "pydantic-1"] }
-pydantic-1-cpu = { features = ["mm", "examples", "dev", "docs", "pydantic-1"] }
+pydantic-1-cpu = { features = ["cpu", "mm", "examples", "dev", "docs", "pydantic-1"] }
 
 [tool.pixi.tasks]
 lint = "ruff check smee examples"
