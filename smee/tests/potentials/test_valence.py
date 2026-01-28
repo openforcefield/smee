@@ -86,7 +86,8 @@ def test_compute_harmonic_bond_energy(conformer, expected_shape):
 )
 def test_compute_harmonic_angle_energy(conformer, expected_shape):
     atom_indices = torch.tensor([[0, 1, 2]])
-    parameters = torch.tensor([[2.0, 92.5]], requires_grad=True)
+    # 1.67 radians ≈ 95.7 degrees, compared to equilibrium value of 90 degrees (1.57 radians)
+    parameters = torch.tensor([[200.0, 1.67]], requires_grad=True)
 
     potential, system = _mock_models(atom_indices, parameters, ("k", "angle"))
 
@@ -227,10 +228,10 @@ def test_compute_linear_angle_energy(conformer, expected_shape):
     atom_indices = torch.tensor([[0, 1, 2]])
 
     # Original harmonic parameters from test_compute_harmonic_angle_energy
-    k_harmonic = torch.tensor([2.0])
-    angle_harmonic = torch.tensor([92.5])
+    k_harmonic = torch.tensor([200.0])
+    angle_harmonic = torch.tensor([1.67])  # radians
 
-    # Choose basis functions with reasonable spacing around equilibrium (±0.2 radians)
+    # Choose basis functions with reasonable spacing around equilibrium (±0.2 radians ≈ ±11.5 degrees)
     angle1 = angle_harmonic - 0.2
     angle2 = angle_harmonic + 0.2
 
