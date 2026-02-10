@@ -22,16 +22,28 @@ jobs:
         apt update && apt install -y git make
 
         make env
-        make lint
-        make test
-        make test-examples
-        make docs
 
+    - name: Lint
+      run: make lint
+    
+    - name: Test
+      run: make test
+
+    - name: Test Examples
+      run: make test-examples
+    
+    - name: Build Docs
+      run: make docs
+
+    - name: Reconstruct environment with Pydantic 1.0
+      run: |
         # TODO: Remove this once pydantic 1.0 support is dropped
         #       We remove absolv as femto needs pydantic >=2
-        mamba remove  --name smee --yes "absolv"
+        mamba remove  --name smee --yes "absolv" --force
         mamba install --name smee --yes "pydantic <2"
-        make test
+
+    - name: Test with Pydantic 1.0
+      run: make test
 
     - name: CodeCov
       uses: codecov/codecov-action@v4.1.1
