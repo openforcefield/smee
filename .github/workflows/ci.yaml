@@ -24,16 +24,25 @@ jobs:
         cache: true
         environments: cpu pydantic-1-cpu
 
-    - name: Run tests with pydantic >=2
+    - name: Lint
       run: |
         pixi run --environment cpu lint
-        pixi run --environment cpu test
-        pixi run --environment cpu test-examples
-        pixi run --environment cpu docs
 
-    - name: Run tests with pydantic <2)
+    - name: Run tests with pydantic >=2
+      run: |
+        pixi run --environment cpu test
+
+    - name: Run tests with pydantic <2
       run: |
         pixi run --environment pydantic-1-cpu test
+
+    - name: Test examples with pydantic >=2
+      run: |
+        pixi run --environment cpu test-examples
+
+    - name: Build docs
+      run: |
+        pixi run --environment cpu docs
 
     - name: CodeCov
       uses: codecov/codecov-action@v4.1.1

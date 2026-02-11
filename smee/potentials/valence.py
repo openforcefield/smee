@@ -151,3 +151,72 @@ def compute_cosine_improper_torsion_energy(
         The computed potential energy [kcal / mol].
     """
     return _compute_cosine_torsion_energy(system, potential, conformer)
+
+
+@smee.potentials.potential_energy_fn(
+    smee.PotentialType.LINEAR_BONDS, smee.EnergyFn.BOND_LINEAR
+)
+def compute_linear_bond_energy(
+    system: smee.TensorSystem,
+    potential: smee.TensorPotential,
+    conformer: torch.Tensor,
+) -> torch.Tensor:
+    """Compute the potential energy [kcal / mol] of a set of bonds for a given
+    conformer using a linearized harmonic potential of the form
+    ``1/2 * (k1+k2) * (r - (k1 * b1 + k2 * b2) / k) ** 2``
+
+    Args:
+        system: The system to compute the energy for.
+        potential: The potential energy function to evaluate.
+        conformer: The conformer [Å] to evaluate the potential at with
+            ``shape=(n_confs, n_particles, 3)`` or ``shape=(n_particles, 3)``.
+
+    Returns:
+        The computed potential energy [kcal / mol].
+    """
+    parameters = smee.potentials.broadcast_parameters(system, potential)
+    particle_idxs = smee.potentials.broadcast_idxs(system, potential)
+
+    _, distances = smee.geometry.compute_bond_vectors(conformer, particle_idxs)
+
+    k1 = parameters[:, potential.parameter_cols.index("k1")]
+    k2 = parameters[:, potential.parameter_cols.index("k2")]
+    b1 = parameters[:, potential.parameter_cols.index("b1")]
+    b2 = parameters[:, potential.parameter_cols.index("b2")]
+    k0 = k1 + k2
+    b0 = (k1 * b1 + k2 * b2) / k0
+    return (0.5 * k0 * (distances - b0) ** 2).sum(-1)
+
+
+@smee.potentials.potential_energy_fn(
+    smee.PotentialType.LINEAR_ANGLES, smee.EnergyFn.ANGLE_LINEAR
+)
+def compute_linear_angle_energy(
+    system: smee.TensorSystem,
+    potential: smee.TensorPotential,
+    conformer: torch.Tensor,
+) -> torch.Tensor:
+    """Compute the potential energy [kcal / mol] of a set of valence angles for a given
+        conformer using a linearized harmonic potential of the form
+    ``1/2 * (k1+k2) * (r - (k1 * angle1 + k2 * angle2) / k) ** 2``
+
+    Args:
+        system: The system to compute the energy for.
+        potential: The potential energy function to evaluate.
+        conformer: The conformer [Å] to evaluate the potential at with
+            ``shape=(n_confs, n_particles, 3)`` or ``shape=(n_particles, 3)``.
+
+    Returns:
+        The computed potential energy [kcal / mol].
+    """
+
+    parameters = smee.potentials.broadcast_parameters(system, potential)
+    particle_idxs = smee.potentials.broadcast_idxs(system, potential)
+    theta = smee.geometry.compute_angles(conformer, particle_idxs)
+    k1 = parameters[:, potential.parameter_cols.index("k1")]
+    k2 = parameters[:, potential.parameter_cols.index("k2")]
+    a1 = parameters[:, potential.parameter_cols.index("angle1")]
+    a2 = parameters[:, potential.parameter_cols.index("angle2")]
+    k0 = k1 + k2
+    a0 = (k1 * a1 + k2 * a2) / k0
+    return (0.5 * k0 * (theta - a0) ** 2).sum(-1)

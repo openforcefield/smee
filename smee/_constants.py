@@ -32,6 +32,9 @@ class PotentialType(_StrEnum):
     PROPER_TORSIONS = "ProperTorsions"
     IMPROPER_TORSIONS = "ImproperTorsions"
 
+    LINEAR_BONDS = "LinearBonds"
+    LINEAR_ANGLES = "LinearAngles"
+
     VDW = "vdW"
     ELECTROSTATICS = "Electrostatics"
 
@@ -54,6 +57,10 @@ class EnergyFn(_StrEnum):
     ANGLE_HARMONIC = "k/2*(theta-angle)**2"
 
     TORSION_COSINE = "k*(1+cos(periodicity*theta-phase))"
+
+    BOND_LINEAR = "(k1+k2)/2*(r-(k1*length1+k2*length2)/(k1+k2))**2"
+
+    ANGLE_LINEAR = "(k1+k2)/2*(r-(k1*angle1+k2*angle2)/(k1+k2))**2"
 
 
 CUTOFF_ATTRIBUTE = "cutoff"
