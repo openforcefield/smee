@@ -39,7 +39,7 @@ dependencies:
   - jupyter
   - nbconvert
   - nglview
-  - smirnoff-plugins >=0.0.4
+  - smirnoff-plugins >=2025.09.0
 
   # Dev / Testing
   - ambertools
