@@ -39,7 +39,7 @@ jobs:
       run: |
         # TODO: Remove this once pydantic 1.0 support is dropped
         #       We remove absolv as femto needs pydantic >=2
-        mamba remove  --name smee --yes "absolv" --force
+        mamba remove  --name smee --yes "absolv" "absolv-base" "femto" --force
         mamba install --name smee --yes "pydantic <2"
 
     - name: Test with Pydantic 1.0
