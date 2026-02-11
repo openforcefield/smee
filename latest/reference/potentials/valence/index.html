@@ -1393,6 +1393,28 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#smee.potentials.valence.compute_linear_bond_energy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;compute_linear_bond_energy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#smee.potentials.valence.compute_linear_angle_energy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;compute_linear_angle_energy
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1550,6 +1572,28 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#smee.potentials.valence.compute_linear_bond_energy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;compute_linear_bond_energy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#smee.potentials.valence.compute_linear_angle_energy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;compute_linear_angle_energy
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1623,6 +1667,20 @@
             –
             <div class="doc-md-description">
               <p>Compute the potential energy [kcal / mol] of a set of improper torsions</p>
+            </div>
+          </li>
+          <li class="doc-section-item field-body">
+            <b><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;compute_linear_bond_energy&lt;/span&gt; (&lt;code&gt;smee.potentials.valence.compute_linear_bond_energy&lt;/code&gt;)" href="#smee.potentials.valence.compute_linear_bond_energy">compute_linear_bond_energy</a></code></b>
+            –
+            <div class="doc-md-description">
+              <p>Compute the potential energy [kcal / mol] of a set of bonds for a given</p>
+            </div>
+          </li>
+          <li class="doc-section-item field-body">
+            <b><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;compute_linear_angle_energy&lt;/span&gt; (&lt;code&gt;smee.potentials.valence.compute_linear_angle_energy&lt;/code&gt;)" href="#smee.potentials.valence.compute_linear_angle_energy">compute_linear_angle_energy</a></code></b>
+            –
+            <div class="doc-md-description">
+              <p>Compute the potential energy [kcal / mol] of a set of valence angles for a given</p>
             </div>
           </li>
     </ul>
@@ -2210,6 +2268,318 @@ for a given conformer using a cosine potential of the form:</p>
 </span><span id="__span-0-151"><a id="__codelineno-0-151" name="__codelineno-0-151"></a><span class="sd">        The computed potential energy [kcal / mol].</span>
 </span><span id="__span-0-152"><a id="__codelineno-0-152" name="__codelineno-0-152"></a><span class="sd">    &quot;&quot;&quot;</span>
 </span><span id="__span-0-153"><a id="__codelineno-0-153" name="__codelineno-0-153"></a>    <span class="k">return</span> <span class="n">_compute_cosine_torsion_energy</span><span class="p">(</span><span class="n">system</span><span class="p">,</span> <span class="n">potential</span><span class="p">,</span> <span class="n">conformer</span><span class="p">)</span>
+</span></code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="smee.potentials.valence.compute_linear_bond_energy" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">compute_linear_bond_energy</span>
+
+
+<a href="#smee.potentials.valence.compute_linear_bond_energy" class="headerlink" title="Permanent link">#</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">compute_linear_bond_energy</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">system</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;TensorSystem&lt;/span&gt;
+
+
+  &lt;span class=&quot;doc doc-labels&quot;&gt;
+      &lt;small class=&quot;doc doc-label doc-label-dataclass&quot;&gt;&lt;code&gt;dataclass&lt;/code&gt;&lt;/small&gt;
+  &lt;/span&gt; (&lt;code&gt;smee.TensorSystem&lt;/code&gt;)" href="../../#smee.TensorSystem">TensorSystem</a></span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">potential</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;TensorPotential&lt;/span&gt;
+
+
+  &lt;span class=&quot;doc doc-labels&quot;&gt;
+      &lt;small class=&quot;doc doc-label doc-label-dataclass&quot;&gt;&lt;code&gt;dataclass&lt;/code&gt;&lt;/small&gt;
+  &lt;/span&gt; (&lt;code&gt;smee.TensorPotential&lt;/code&gt;)" href="../../#smee.TensorPotential">TensorPotential</a></span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">conformer</span><span class="p">:</span> <span class="n"><span title="torch.Tensor">Tensor</span></span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="torch.Tensor">Tensor</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Compute the potential energy [kcal / mol] of a set of bonds for a given
+conformer using a linearized harmonic potential of the form
+<code>1/2 * (k1+k2) * (r - (k1 * b1 + k2 * b2) / k) ** 2</code></p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+            <b><code>system</code></b>
+              (<code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;TensorSystem&lt;/span&gt;
+
+
+  &lt;span class=&quot;doc doc-labels&quot;&gt;
+      &lt;small class=&quot;doc doc-label doc-label-dataclass&quot;&gt;&lt;code&gt;dataclass&lt;/code&gt;&lt;/small&gt;
+  &lt;/span&gt; (&lt;code&gt;smee.TensorSystem&lt;/code&gt;)" href="../../#smee.TensorSystem">TensorSystem</a></code>)
+          –
+          <div class="doc-md-description">
+            <p>The system to compute the energy for.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+            <b><code>potential</code></b>
+              (<code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;TensorPotential&lt;/span&gt;
+
+
+  &lt;span class=&quot;doc doc-labels&quot;&gt;
+      &lt;small class=&quot;doc doc-label doc-label-dataclass&quot;&gt;&lt;code&gt;dataclass&lt;/code&gt;&lt;/small&gt;
+  &lt;/span&gt; (&lt;code&gt;smee.TensorPotential&lt;/code&gt;)" href="../../#smee.TensorPotential">TensorPotential</a></code>)
+          –
+          <div class="doc-md-description">
+            <p>The potential energy function to evaluate.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+            <b><code>conformer</code></b>
+              (<code><span title="torch.Tensor">Tensor</span></code>)
+          –
+          <div class="doc-md-description">
+            <p>The conformer [Å] to evaluate the potential at with
+<code>shape=(n_confs, n_particles, 3)</code> or <code>shape=(n_particles, 3)</code>.</p>
+          </div>
+        </li>
+    </ul>
+
+
+<p><span class="doc-section-title">Returns:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+              <code><span title="torch.Tensor">Tensor</span></code>
+          –
+          <div class="doc-md-description">
+            <p>The computed potential energy [kcal / mol].</p>
+          </div>
+        </li>
+    </ul>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>smee/potentials/valence.py</code></summary>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-156">156</a></span>
+<span class="normal"><a href="#__codelineno-0-157">157</a></span>
+<span class="normal"><a href="#__codelineno-0-158">158</a></span>
+<span class="normal"><a href="#__codelineno-0-159">159</a></span>
+<span class="normal"><a href="#__codelineno-0-160">160</a></span>
+<span class="normal"><a href="#__codelineno-0-161">161</a></span>
+<span class="normal"><a href="#__codelineno-0-162">162</a></span>
+<span class="normal"><a href="#__codelineno-0-163">163</a></span>
+<span class="normal"><a href="#__codelineno-0-164">164</a></span>
+<span class="normal"><a href="#__codelineno-0-165">165</a></span>
+<span class="normal"><a href="#__codelineno-0-166">166</a></span>
+<span class="normal"><a href="#__codelineno-0-167">167</a></span>
+<span class="normal"><a href="#__codelineno-0-168">168</a></span>
+<span class="normal"><a href="#__codelineno-0-169">169</a></span>
+<span class="normal"><a href="#__codelineno-0-170">170</a></span>
+<span class="normal"><a href="#__codelineno-0-171">171</a></span>
+<span class="normal"><a href="#__codelineno-0-172">172</a></span>
+<span class="normal"><a href="#__codelineno-0-173">173</a></span>
+<span class="normal"><a href="#__codelineno-0-174">174</a></span>
+<span class="normal"><a href="#__codelineno-0-175">175</a></span>
+<span class="normal"><a href="#__codelineno-0-176">176</a></span>
+<span class="normal"><a href="#__codelineno-0-177">177</a></span>
+<span class="normal"><a href="#__codelineno-0-178">178</a></span>
+<span class="normal"><a href="#__codelineno-0-179">179</a></span>
+<span class="normal"><a href="#__codelineno-0-180">180</a></span>
+<span class="normal"><a href="#__codelineno-0-181">181</a></span>
+<span class="normal"><a href="#__codelineno-0-182">182</a></span>
+<span class="normal"><a href="#__codelineno-0-183">183</a></span>
+<span class="normal"><a href="#__codelineno-0-184">184</a></span>
+<span class="normal"><a href="#__codelineno-0-185">185</a></span>
+<span class="normal"><a href="#__codelineno-0-186">186</a></span>
+<span class="normal"><a href="#__codelineno-0-187">187</a></span>
+<span class="normal"><a href="#__codelineno-0-188">188</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-156"><a id="__codelineno-0-156" name="__codelineno-0-156"></a><span class="nd">@smee</span><span class="o">.</span><span class="n">potentials</span><span class="o">.</span><span class="n">potential_energy_fn</span><span class="p">(</span>
+</span><span id="__span-0-157"><a id="__codelineno-0-157" name="__codelineno-0-157"></a>    <span class="n">smee</span><span class="o">.</span><span class="n">PotentialType</span><span class="o">.</span><span class="n">LINEAR_BONDS</span><span class="p">,</span> <span class="n">smee</span><span class="o">.</span><span class="n">EnergyFn</span><span class="o">.</span><span class="n">BOND_LINEAR</span>
+</span><span id="__span-0-158"><a id="__codelineno-0-158" name="__codelineno-0-158"></a><span class="p">)</span>
+</span><span id="__span-0-159"><a id="__codelineno-0-159" name="__codelineno-0-159"></a><span class="k">def</span><span class="w"> </span><span class="nf">compute_linear_bond_energy</span><span class="p">(</span>
+</span><span id="__span-0-160"><a id="__codelineno-0-160" name="__codelineno-0-160"></a>    <span class="n">system</span><span class="p">:</span> <span class="n">smee</span><span class="o">.</span><span class="n">TensorSystem</span><span class="p">,</span>
+</span><span id="__span-0-161"><a id="__codelineno-0-161" name="__codelineno-0-161"></a>    <span class="n">potential</span><span class="p">:</span> <span class="n">smee</span><span class="o">.</span><span class="n">TensorPotential</span><span class="p">,</span>
+</span><span id="__span-0-162"><a id="__codelineno-0-162" name="__codelineno-0-162"></a>    <span class="n">conformer</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+</span><span id="__span-0-163"><a id="__codelineno-0-163" name="__codelineno-0-163"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+</span><span id="__span-0-164"><a id="__codelineno-0-164" name="__codelineno-0-164"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the potential energy [kcal / mol] of a set of bonds for a given</span>
+</span><span id="__span-0-165"><a id="__codelineno-0-165" name="__codelineno-0-165"></a><span class="sd">    conformer using a linearized harmonic potential of the form</span>
+</span><span id="__span-0-166"><a id="__codelineno-0-166" name="__codelineno-0-166"></a><span class="sd">    ``1/2 * (k1+k2) * (r - (k1 * b1 + k2 * b2) / k) ** 2``</span>
+</span><span id="__span-0-167"><a id="__codelineno-0-167" name="__codelineno-0-167"></a>
+</span><span id="__span-0-168"><a id="__codelineno-0-168" name="__codelineno-0-168"></a><span class="sd">    Args:</span>
+</span><span id="__span-0-169"><a id="__codelineno-0-169" name="__codelineno-0-169"></a><span class="sd">        system: The system to compute the energy for.</span>
+</span><span id="__span-0-170"><a id="__codelineno-0-170" name="__codelineno-0-170"></a><span class="sd">        potential: The potential energy function to evaluate.</span>
+</span><span id="__span-0-171"><a id="__codelineno-0-171" name="__codelineno-0-171"></a><span class="sd">        conformer: The conformer [Å] to evaluate the potential at with</span>
+</span><span id="__span-0-172"><a id="__codelineno-0-172" name="__codelineno-0-172"></a><span class="sd">            ``shape=(n_confs, n_particles, 3)`` or ``shape=(n_particles, 3)``.</span>
+</span><span id="__span-0-173"><a id="__codelineno-0-173" name="__codelineno-0-173"></a>
+</span><span id="__span-0-174"><a id="__codelineno-0-174" name="__codelineno-0-174"></a><span class="sd">    Returns:</span>
+</span><span id="__span-0-175"><a id="__codelineno-0-175" name="__codelineno-0-175"></a><span class="sd">        The computed potential energy [kcal / mol].</span>
+</span><span id="__span-0-176"><a id="__codelineno-0-176" name="__codelineno-0-176"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__span-0-177"><a id="__codelineno-0-177" name="__codelineno-0-177"></a>    <span class="n">parameters</span> <span class="o">=</span> <span class="n">smee</span><span class="o">.</span><span class="n">potentials</span><span class="o">.</span><span class="n">broadcast_parameters</span><span class="p">(</span><span class="n">system</span><span class="p">,</span> <span class="n">potential</span><span class="p">)</span>
+</span><span id="__span-0-178"><a id="__codelineno-0-178" name="__codelineno-0-178"></a>    <span class="n">particle_idxs</span> <span class="o">=</span> <span class="n">smee</span><span class="o">.</span><span class="n">potentials</span><span class="o">.</span><span class="n">broadcast_idxs</span><span class="p">(</span><span class="n">system</span><span class="p">,</span> <span class="n">potential</span><span class="p">)</span>
+</span><span id="__span-0-179"><a id="__codelineno-0-179" name="__codelineno-0-179"></a>
+</span><span id="__span-0-180"><a id="__codelineno-0-180" name="__codelineno-0-180"></a>    <span class="n">_</span><span class="p">,</span> <span class="n">distances</span> <span class="o">=</span> <span class="n">smee</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">compute_bond_vectors</span><span class="p">(</span><span class="n">conformer</span><span class="p">,</span> <span class="n">particle_idxs</span><span class="p">)</span>
+</span><span id="__span-0-181"><a id="__codelineno-0-181" name="__codelineno-0-181"></a>
+</span><span id="__span-0-182"><a id="__codelineno-0-182" name="__codelineno-0-182"></a>    <span class="n">k1</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[:,</span> <span class="n">potential</span><span class="o">.</span><span class="n">parameter_cols</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;k1&quot;</span><span class="p">)]</span>
+</span><span id="__span-0-183"><a id="__codelineno-0-183" name="__codelineno-0-183"></a>    <span class="n">k2</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[:,</span> <span class="n">potential</span><span class="o">.</span><span class="n">parameter_cols</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;k2&quot;</span><span class="p">)]</span>
+</span><span id="__span-0-184"><a id="__codelineno-0-184" name="__codelineno-0-184"></a>    <span class="n">b1</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[:,</span> <span class="n">potential</span><span class="o">.</span><span class="n">parameter_cols</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;b1&quot;</span><span class="p">)]</span>
+</span><span id="__span-0-185"><a id="__codelineno-0-185" name="__codelineno-0-185"></a>    <span class="n">b2</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[:,</span> <span class="n">potential</span><span class="o">.</span><span class="n">parameter_cols</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;b2&quot;</span><span class="p">)]</span>
+</span><span id="__span-0-186"><a id="__codelineno-0-186" name="__codelineno-0-186"></a>    <span class="n">k0</span> <span class="o">=</span> <span class="n">k1</span> <span class="o">+</span> <span class="n">k2</span>
+</span><span id="__span-0-187"><a id="__codelineno-0-187" name="__codelineno-0-187"></a>    <span class="n">b0</span> <span class="o">=</span> <span class="p">(</span><span class="n">k1</span> <span class="o">*</span> <span class="n">b1</span> <span class="o">+</span> <span class="n">k2</span> <span class="o">*</span> <span class="n">b2</span><span class="p">)</span> <span class="o">/</span> <span class="n">k0</span>
+</span><span id="__span-0-188"><a id="__codelineno-0-188" name="__codelineno-0-188"></a>    <span class="k">return</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">k0</span> <span class="o">*</span> <span class="p">(</span><span class="n">distances</span> <span class="o">-</span> <span class="n">b0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+</span></code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="smee.potentials.valence.compute_linear_angle_energy" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">compute_linear_angle_energy</span>
+
+
+<a href="#smee.potentials.valence.compute_linear_angle_energy" class="headerlink" title="Permanent link">#</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">compute_linear_angle_energy</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">system</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;TensorSystem&lt;/span&gt;
+
+
+  &lt;span class=&quot;doc doc-labels&quot;&gt;
+      &lt;small class=&quot;doc doc-label doc-label-dataclass&quot;&gt;&lt;code&gt;dataclass&lt;/code&gt;&lt;/small&gt;
+  &lt;/span&gt; (&lt;code&gt;smee.TensorSystem&lt;/code&gt;)" href="../../#smee.TensorSystem">TensorSystem</a></span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">potential</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;TensorPotential&lt;/span&gt;
+
+
+  &lt;span class=&quot;doc doc-labels&quot;&gt;
+      &lt;small class=&quot;doc doc-label doc-label-dataclass&quot;&gt;&lt;code&gt;dataclass&lt;/code&gt;&lt;/small&gt;
+  &lt;/span&gt; (&lt;code&gt;smee.TensorPotential&lt;/code&gt;)" href="../../#smee.TensorPotential">TensorPotential</a></span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">conformer</span><span class="p">:</span> <span class="n"><span title="torch.Tensor">Tensor</span></span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="torch.Tensor">Tensor</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Compute the potential energy [kcal / mol] of a set of valence angles for a given
+    conformer using a linearized harmonic potential of the form
+<code>1/2 * (k1+k2) * (r - (k1 * angle1 + k2 * angle2) / k) ** 2</code></p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+            <b><code>system</code></b>
+              (<code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;TensorSystem&lt;/span&gt;
+
+
+  &lt;span class=&quot;doc doc-labels&quot;&gt;
+      &lt;small class=&quot;doc doc-label doc-label-dataclass&quot;&gt;&lt;code&gt;dataclass&lt;/code&gt;&lt;/small&gt;
+  &lt;/span&gt; (&lt;code&gt;smee.TensorSystem&lt;/code&gt;)" href="../../#smee.TensorSystem">TensorSystem</a></code>)
+          –
+          <div class="doc-md-description">
+            <p>The system to compute the energy for.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+            <b><code>potential</code></b>
+              (<code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;TensorPotential&lt;/span&gt;
+
+
+  &lt;span class=&quot;doc doc-labels&quot;&gt;
+      &lt;small class=&quot;doc doc-label doc-label-dataclass&quot;&gt;&lt;code&gt;dataclass&lt;/code&gt;&lt;/small&gt;
+  &lt;/span&gt; (&lt;code&gt;smee.TensorPotential&lt;/code&gt;)" href="../../#smee.TensorPotential">TensorPotential</a></code>)
+          –
+          <div class="doc-md-description">
+            <p>The potential energy function to evaluate.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+            <b><code>conformer</code></b>
+              (<code><span title="torch.Tensor">Tensor</span></code>)
+          –
+          <div class="doc-md-description">
+            <p>The conformer [Å] to evaluate the potential at with
+<code>shape=(n_confs, n_particles, 3)</code> or <code>shape=(n_particles, 3)</code>.</p>
+          </div>
+        </li>
+    </ul>
+
+
+<p><span class="doc-section-title">Returns:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+              <code><span title="torch.Tensor">Tensor</span></code>
+          –
+          <div class="doc-md-description">
+            <p>The computed potential energy [kcal / mol].</p>
+          </div>
+        </li>
+    </ul>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>smee/potentials/valence.py</code></summary>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-191">191</a></span>
+<span class="normal"><a href="#__codelineno-0-192">192</a></span>
+<span class="normal"><a href="#__codelineno-0-193">193</a></span>
+<span class="normal"><a href="#__codelineno-0-194">194</a></span>
+<span class="normal"><a href="#__codelineno-0-195">195</a></span>
+<span class="normal"><a href="#__codelineno-0-196">196</a></span>
+<span class="normal"><a href="#__codelineno-0-197">197</a></span>
+<span class="normal"><a href="#__codelineno-0-198">198</a></span>
+<span class="normal"><a href="#__codelineno-0-199">199</a></span>
+<span class="normal"><a href="#__codelineno-0-200">200</a></span>
+<span class="normal"><a href="#__codelineno-0-201">201</a></span>
+<span class="normal"><a href="#__codelineno-0-202">202</a></span>
+<span class="normal"><a href="#__codelineno-0-203">203</a></span>
+<span class="normal"><a href="#__codelineno-0-204">204</a></span>
+<span class="normal"><a href="#__codelineno-0-205">205</a></span>
+<span class="normal"><a href="#__codelineno-0-206">206</a></span>
+<span class="normal"><a href="#__codelineno-0-207">207</a></span>
+<span class="normal"><a href="#__codelineno-0-208">208</a></span>
+<span class="normal"><a href="#__codelineno-0-209">209</a></span>
+<span class="normal"><a href="#__codelineno-0-210">210</a></span>
+<span class="normal"><a href="#__codelineno-0-211">211</a></span>
+<span class="normal"><a href="#__codelineno-0-212">212</a></span>
+<span class="normal"><a href="#__codelineno-0-213">213</a></span>
+<span class="normal"><a href="#__codelineno-0-214">214</a></span>
+<span class="normal"><a href="#__codelineno-0-215">215</a></span>
+<span class="normal"><a href="#__codelineno-0-216">216</a></span>
+<span class="normal"><a href="#__codelineno-0-217">217</a></span>
+<span class="normal"><a href="#__codelineno-0-218">218</a></span>
+<span class="normal"><a href="#__codelineno-0-219">219</a></span>
+<span class="normal"><a href="#__codelineno-0-220">220</a></span>
+<span class="normal"><a href="#__codelineno-0-221">221</a></span>
+<span class="normal"><a href="#__codelineno-0-222">222</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-191"><a id="__codelineno-0-191" name="__codelineno-0-191"></a><span class="nd">@smee</span><span class="o">.</span><span class="n">potentials</span><span class="o">.</span><span class="n">potential_energy_fn</span><span class="p">(</span>
+</span><span id="__span-0-192"><a id="__codelineno-0-192" name="__codelineno-0-192"></a>    <span class="n">smee</span><span class="o">.</span><span class="n">PotentialType</span><span class="o">.</span><span class="n">LINEAR_ANGLES</span><span class="p">,</span> <span class="n">smee</span><span class="o">.</span><span class="n">EnergyFn</span><span class="o">.</span><span class="n">ANGLE_LINEAR</span>
+</span><span id="__span-0-193"><a id="__codelineno-0-193" name="__codelineno-0-193"></a><span class="p">)</span>
+</span><span id="__span-0-194"><a id="__codelineno-0-194" name="__codelineno-0-194"></a><span class="k">def</span><span class="w"> </span><span class="nf">compute_linear_angle_energy</span><span class="p">(</span>
+</span><span id="__span-0-195"><a id="__codelineno-0-195" name="__codelineno-0-195"></a>    <span class="n">system</span><span class="p">:</span> <span class="n">smee</span><span class="o">.</span><span class="n">TensorSystem</span><span class="p">,</span>
+</span><span id="__span-0-196"><a id="__codelineno-0-196" name="__codelineno-0-196"></a>    <span class="n">potential</span><span class="p">:</span> <span class="n">smee</span><span class="o">.</span><span class="n">TensorPotential</span><span class="p">,</span>
+</span><span id="__span-0-197"><a id="__codelineno-0-197" name="__codelineno-0-197"></a>    <span class="n">conformer</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+</span><span id="__span-0-198"><a id="__codelineno-0-198" name="__codelineno-0-198"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+</span><span id="__span-0-199"><a id="__codelineno-0-199" name="__codelineno-0-199"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the potential energy [kcal / mol] of a set of valence angles for a given</span>
+</span><span id="__span-0-200"><a id="__codelineno-0-200" name="__codelineno-0-200"></a><span class="sd">        conformer using a linearized harmonic potential of the form</span>
+</span><span id="__span-0-201"><a id="__codelineno-0-201" name="__codelineno-0-201"></a><span class="sd">    ``1/2 * (k1+k2) * (r - (k1 * angle1 + k2 * angle2) / k) ** 2``</span>
+</span><span id="__span-0-202"><a id="__codelineno-0-202" name="__codelineno-0-202"></a>
+</span><span id="__span-0-203"><a id="__codelineno-0-203" name="__codelineno-0-203"></a><span class="sd">    Args:</span>
+</span><span id="__span-0-204"><a id="__codelineno-0-204" name="__codelineno-0-204"></a><span class="sd">        system: The system to compute the energy for.</span>
+</span><span id="__span-0-205"><a id="__codelineno-0-205" name="__codelineno-0-205"></a><span class="sd">        potential: The potential energy function to evaluate.</span>
+</span><span id="__span-0-206"><a id="__codelineno-0-206" name="__codelineno-0-206"></a><span class="sd">        conformer: The conformer [Å] to evaluate the potential at with</span>
+</span><span id="__span-0-207"><a id="__codelineno-0-207" name="__codelineno-0-207"></a><span class="sd">            ``shape=(n_confs, n_particles, 3)`` or ``shape=(n_particles, 3)``.</span>
+</span><span id="__span-0-208"><a id="__codelineno-0-208" name="__codelineno-0-208"></a>
+</span><span id="__span-0-209"><a id="__codelineno-0-209" name="__codelineno-0-209"></a><span class="sd">    Returns:</span>
+</span><span id="__span-0-210"><a id="__codelineno-0-210" name="__codelineno-0-210"></a><span class="sd">        The computed potential energy [kcal / mol].</span>
+</span><span id="__span-0-211"><a id="__codelineno-0-211" name="__codelineno-0-211"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__span-0-212"><a id="__codelineno-0-212" name="__codelineno-0-212"></a>
+</span><span id="__span-0-213"><a id="__codelineno-0-213" name="__codelineno-0-213"></a>    <span class="n">parameters</span> <span class="o">=</span> <span class="n">smee</span><span class="o">.</span><span class="n">potentials</span><span class="o">.</span><span class="n">broadcast_parameters</span><span class="p">(</span><span class="n">system</span><span class="p">,</span> <span class="n">potential</span><span class="p">)</span>
+</span><span id="__span-0-214"><a id="__codelineno-0-214" name="__codelineno-0-214"></a>    <span class="n">particle_idxs</span> <span class="o">=</span> <span class="n">smee</span><span class="o">.</span><span class="n">potentials</span><span class="o">.</span><span class="n">broadcast_idxs</span><span class="p">(</span><span class="n">system</span><span class="p">,</span> <span class="n">potential</span><span class="p">)</span>
+</span><span id="__span-0-215"><a id="__codelineno-0-215" name="__codelineno-0-215"></a>    <span class="n">theta</span> <span class="o">=</span> <span class="n">smee</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">compute_angles</span><span class="p">(</span><span class="n">conformer</span><span class="p">,</span> <span class="n">particle_idxs</span><span class="p">)</span>
+</span><span id="__span-0-216"><a id="__codelineno-0-216" name="__codelineno-0-216"></a>    <span class="n">k1</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[:,</span> <span class="n">potential</span><span class="o">.</span><span class="n">parameter_cols</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;k1&quot;</span><span class="p">)]</span>
+</span><span id="__span-0-217"><a id="__codelineno-0-217" name="__codelineno-0-217"></a>    <span class="n">k2</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[:,</span> <span class="n">potential</span><span class="o">.</span><span class="n">parameter_cols</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;k2&quot;</span><span class="p">)]</span>
+</span><span id="__span-0-218"><a id="__codelineno-0-218" name="__codelineno-0-218"></a>    <span class="n">a1</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[:,</span> <span class="n">potential</span><span class="o">.</span><span class="n">parameter_cols</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;angle1&quot;</span><span class="p">)]</span>
+</span><span id="__span-0-219"><a id="__codelineno-0-219" name="__codelineno-0-219"></a>    <span class="n">a2</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[:,</span> <span class="n">potential</span><span class="o">.</span><span class="n">parameter_cols</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;angle2&quot;</span><span class="p">)]</span>
+</span><span id="__span-0-220"><a id="__codelineno-0-220" name="__codelineno-0-220"></a>    <span class="n">k0</span> <span class="o">=</span> <span class="n">k1</span> <span class="o">+</span> <span class="n">k2</span>
+</span><span id="__span-0-221"><a id="__codelineno-0-221" name="__codelineno-0-221"></a>    <span class="n">a0</span> <span class="o">=</span> <span class="p">(</span><span class="n">k1</span> <span class="o">*</span> <span class="n">a1</span> <span class="o">+</span> <span class="n">k2</span> <span class="o">*</span> <span class="n">a2</span><span class="p">)</span> <span class="o">/</span> <span class="n">k0</span>
+</span><span id="__span-0-222"><a id="__codelineno-0-222" name="__codelineno-0-222"></a>    <span class="k">return</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">k0</span> <span class="o">*</span> <span class="p">(</span><span class="n">theta</span> <span class="o">-</span> <span class="n">a0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>
