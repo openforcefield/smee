@@ -56,7 +56,7 @@ jobs:
         #       We remove absolv as femto needs pydantic >=2
         mamba remove  --name smee --yes "absolv" "absolv-base" "femto" "pint" --force
         # remove ambertools to see what else depends on it
-        mamba remove -- name smee --yes "ambertools"
+        mamba remove  --name smee --yes "ambertools"
         mamba install --name smee --yes "pydantic <2"
         conda list
 >>>>>>> 5966e47 (update)
