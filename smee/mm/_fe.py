@@ -8,7 +8,6 @@ import typing
 import numpy
 import openff.toolkit
 import openmm.unit
-import parmed.openmm
 import torch
 import yaml
 
@@ -112,6 +111,7 @@ def generate_dg_solv_data(
     import absolv.runner
     import femto.md.config
     import femto.md.system
+    import parmed.openmm
 
     output_dir = pathlib.Path.cwd() if output_dir is None else output_dir
 
