@@ -28,8 +28,6 @@ jobs:
             pixi-platform: linux-64
           - os: macos-latest
             pixi-platform: osx-arm64
-          - os: macos-15-intel
-            pixi-platform: osx-64
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
