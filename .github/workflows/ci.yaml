@@ -43,17 +43,13 @@ jobs:
       with:
         pixi-version: v0.62.2
         cache: true
-        environments: default pydantic-1-cpu
+        environments: default
 
-    - name: Run tests with pydantic >=2
+    - name: Unit tests
       run: |
         pixi run test
 
-    - name: Run tests with pydantic <2
-      run: |
-        pixi run --environment pydantic-1-cpu test
-
-    - name: Test examples with pydantic >=2
+    - name: Test examples
       run: |
         pixi run test-examples
 
