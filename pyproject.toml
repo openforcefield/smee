@@ -64,7 +64,6 @@ nnpops = "*"
 pydantic-units = "*"
 networkx = "*"
 pydantic = ">=2"
-ambertools = "*"
 
 [tool.pixi.feature.cu12]
 platforms = ["linux-64"]
