@@ -5,17 +5,15 @@ repos:
     -   id: trailing-whitespace
     -   id: end-of-file-fixer
 
--   repo: local
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version.
+    rev: v0.15.1
     hooks:
-    -   id: ruff-check
-        name: Lint python code with ruff
-        language: system
-        entry: pixi run ruff
-        args: [check]
-        files: \.py$
-    -   id: ruff-format
-        name: Format python code with ruff
-        language: system
-        entry: pixi run ruff
-        args: [format]
-        files: \.py$
+      # Run the linter.
+      - id: ruff
+        types_or: [python, pyi, jupyter]
+        args: [--fix]
+        files: "smee|examples"
+      # Run the formatter.
+      - id: ruff-format
+        types_or: [python, pyi, jupyter]
