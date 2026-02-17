@@ -63,7 +63,6 @@ openff-interchange-base = ">=0.3.17"
 nnpops = "*"
 pydantic-units = "*"
 networkx = "*"
-pydantic = ">=2"
 
 [tool.pixi.feature.cu12]
 platforms = ["linux-64"]
@@ -91,7 +90,7 @@ absolv = ">=1.0.1"
 jupyter = "*"
 nbconvert = "*"
 nglview = "*"
-smirnoff-plugins = ">=2025.09.0"
+smirnoff-plugins = "*"
 
 [tool.pixi.feature.dev.dependencies]
 ambertools = "*"
@@ -117,9 +116,18 @@ griffe-pydantic = "*"
 black = "*"
 mike = "*"
 
+[tool.pixi.feature.pydantic-2.dependencies]
+pydantic = ">=2.0"
+
+[tool.pixi.feature.pydantic-1.dependencies]
+pydantic = "<2.0"
+
 [tool.pixi.environments]
-default = { features = ["mm", "fe", "examples", "dev", "docs"] }
-cu12 = { features = ["cu12", "mm", "fe", "examples", "dev", "docs"] }
+default = { features = ["mm", "fe", "examples", "dev", "docs", "pydantic-2"] }
+cu12 = { features = ["cu12", "mm", "fe", "examples", "dev", "docs", "pydantic-2"] }
+# The fe feature is excluded when pydantic < 2 as femto (used by absolv) needs pydantic >= 2
+pydantic-1-cpu = { features = ["mm", "examples", "dev", "docs", "pydantic-1"] }
+pydantic-1-cu12 = { features = ["cu12", "mm", "examples", "dev", "docs", "pydantic-1"] }
 
 [tool.pixi.tasks]
 lint = "ruff check smee examples"
