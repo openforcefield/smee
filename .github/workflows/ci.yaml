@@ -10,8 +10,18 @@ on:
 
 jobs:
   test:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            pixi-platform: linux-64
+          - os: macos-latest
+            pixi-platform: osx-arm64
+          - os: macos-15-intel
+            pixi-platform: osx-64
+      fail-fast: false
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
 
     steps:
     - name: Checkout
@@ -26,11 +36,11 @@ jobs:
 
     - name: Lint
       run: |
-        pixi run --environment cpu lint
+        pixi run lint
 
     - name: Run tests with pydantic >=2
       run: |
-        pixi run --environment cpu test
+        pixi run test
 
     - name: Run tests with pydantic <2
       run: |
@@ -38,11 +48,11 @@ jobs:
 
     - name: Test examples with pydantic >=2
       run: |
-        pixi run --environment cpu test-examples
+        pixi run test-examples
 
     - name: Build docs
       run: |
-        pixi run --environment cpu docs
+        pixi run docs
 
     - name: CodeCov
       uses: codecov/codecov-action@v4.1.1
