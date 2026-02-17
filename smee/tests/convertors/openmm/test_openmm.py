@@ -1,3 +1,5 @@
+import importlib.util
+
 import numpy.random
 import openff.interchange
 import openff.toolkit
@@ -17,11 +19,9 @@ from smee.converters.openmm import (
     create_openmm_system,
 )
 
-try:
-    import smirnoff_plugins as _
-    SMIRNOFF_PLUGINS_AVAILABLE = True
-except ImportError:
-    SMIRNOFF_PLUGINS_AVAILABLE = False
+SMIRNOFF_PLUGINS_AVAILABLE = (
+    importlib.util.find_spec("smirnoff_plugins") is not None
+)
 
 
 def _compute_energy(
