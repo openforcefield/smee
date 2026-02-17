@@ -17,17 +17,18 @@ _KCAL_PER_MOLE = openff.units.unit.kilocalories / openff.units.unit.mole
 _E = openff.units.unit.elementary_charge
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def toolkit_registry_rdkit_first():
     """Returns a toolkit registry with RDKit as the first toolkit."""
     return openff.toolkit.utils.ToolkitRegistry(
         toolkit_precedence=[
-            openff.toolkit.utils.NAGLToolkitWrapper,
-            openff.toolkit.utils.RDKitToolkitWrapper,
-            openff.toolkit.utils.OpenEyeToolkitWrapper,
-            openff.toolkit.utils.AmberToolsToolkitWrapper,
-            openff.toolkit.utils.BuiltInToolkitWrapper,
-        ]
+            openff.toolkit.utils.nagl_wrapper.NAGLToolkitWrapper,
+            openff.toolkit.utils.rdkit_wrapper.RDKitToolkitWrapper,
+            openff.toolkit.utils.openeye_wrapper.OpenEyeToolkitWrapper,
+            openff.toolkit.utils.ambertools_wrapper.AmberToolsToolkitWrapper,
+            openff.toolkit.utils.builtin_wrapper.BuiltInToolkitWrapper,
+        ],
+        exception_if_unavailable=False,
     )
 
 
