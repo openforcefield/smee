@@ -15,7 +15,7 @@ from smee.converters.openff.nonbonded import (
 )
 
 try:
-    import smirnoff_plugins
+    import smirnoff_plugins as _
     SMIRNOFF_PLUGINS_AVAILABLE = True
 except ImportError:
     SMIRNOFF_PLUGINS_AVAILABLE = False

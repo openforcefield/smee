@@ -1,4 +1,3 @@
-import pytest
 import numpy.random
 import openff.interchange
 import openff.toolkit
@@ -19,7 +18,7 @@ from smee.converters.openmm import (
 )
 
 try:
-    import smirnoff_plugins
+    import smirnoff_plugins as _
     SMIRNOFF_PLUGINS_AVAILABLE = True
 except ImportError:
     SMIRNOFF_PLUGINS_AVAILABLE = False
