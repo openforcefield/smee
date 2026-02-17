@@ -123,11 +123,11 @@ pydantic = ">=2.0"
 pydantic = "<2.0"
 
 [tool.pixi.environments]
-default = { features = ["mm", "fe", "examples", "dev", "docs", "pydantic-2"], solve-group = "default" }
-cu12 = { features = ["cu12", "mm", "fe", "examples", "dev", "docs", "pydantic-2"], solve-group = "default" }
+default = { features = ["mm", "fe", "examples", "dev", "docs", "pydantic-2"] }
+cu12 = { features = ["cu12", "mm", "fe", "examples", "dev", "docs", "pydantic-2"] }
 # The fe feature is excluded when pydantic < 2 as femto (used by absolv) needs pydantic >= 2
-pydantic-1-cpu = { features = ["mm", "examples", "dev", "docs", "pydantic-1"], solve-group = "pydantic-1" }
-pydantic-1-cu12 = { features = ["cu12", "mm", "examples", "dev", "docs", "pydantic-1"], solve-group = "pydantic-1" }
+pydantic-1-cpu = { features = ["mm", "examples", "dev", "docs", "pydantic-1"] }
+pydantic-1-cu12 = { features = ["cu12", "mm", "examples", "dev", "docs", "pydantic-1"] }
 
 [tool.pixi.tasks]
 lint = "ruff check smee examples"
