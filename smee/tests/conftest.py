@@ -103,12 +103,12 @@ def formaldehyde_conformer(formaldehyde) -> torch.Tensor:
 
 @pytest.fixture(scope="module")
 def formaldehyde_interchange(
-    formaldehyde, default_force_field
+    formaldehyde, default_force_field, toolkit_registry_rdkit_first
 ) -> openff.interchange.Interchange:
     """Returns a parameterized system of formaldehyde."""
 
-    return openff.interchange.Interchange.from_smirnoff(
-        default_force_field, formaldehyde.to_topology()
+    return default_force_field.create_interchange(
+        formaldehyde.to_topology(), toolkit_registry=toolkit_registry_rdkit_first
     )
 
 
