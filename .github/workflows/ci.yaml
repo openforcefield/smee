@@ -1,7 +1,7 @@
 name: CI
 
 concurrency:
-  group: ${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 on:
@@ -33,10 +33,6 @@ jobs:
         pixi-version: v0.62.2
         cache: true
         environments: cpu pydantic-1-cpu
-
-    - name: Lint
-      run: |
-        pixi run lint
 
     - name: Run tests with pydantic >=2
       run: |
