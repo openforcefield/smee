@@ -18,6 +18,20 @@ _E = openff.units.unit.elementary_charge
 
 
 @pytest.fixture
+def toolkit_registry_rdkit_first():
+    """Returns a toolkit registry with RDKit as the first toolkit."""
+    return openff.toolkit.utils.ToolkitRegistry(
+        toolkit_precedence=[
+            openff.toolkit.utils.NAGLToolkitWrapper,
+            openff.toolkit.utils.RDKitToolkitWrapper,
+            openff.toolkit.utils.OpenEyeToolkitWrapper,
+            openff.toolkit.utils.AmberToolsToolkitWrapper,
+            openff.toolkit.utils.BuiltInToolkitWrapper,
+        ]
+    )
+
+
+@pytest.fixture
 def tmp_cwd(tmp_path, monkeypatch) -> pathlib.Path:
     monkeypatch.chdir(tmp_path)
     yield tmp_path
@@ -59,11 +73,12 @@ def ethanol_conformer(ethanol) -> torch.Tensor:
 
 
 @pytest.fixture(scope="module")
-def ethanol_interchange(ethanol, default_force_field) -> openff.interchange.Interchange:
+def ethanol_interchange(
+    ethanol, default_force_field, toolkit_registry_rdkit_first
+) -> openff.interchange.Interchange:
     """Returns a parameterized system of ethanol."""
-
-    return openff.interchange.Interchange.from_smirnoff(
-        default_force_field, ethanol.to_topology()
+    return default_force_field.create_interchange(
+        ethanol.to_topology(), toolkit_registry=toolkit_registry_rdkit_first
     )
 
 

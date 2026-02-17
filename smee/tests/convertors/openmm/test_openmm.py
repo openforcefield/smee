@@ -1,3 +1,4 @@
+import pytest
 import numpy.random
 import openff.interchange
 import openff.toolkit
@@ -16,6 +17,12 @@ from smee.converters.openmm import (
     convert_to_openmm_topology,
     create_openmm_system,
 )
+
+try:
+    import smirnoff_plugins
+    SMIRNOFF_PLUGINS_AVAILABLE = True
+except ImportError:
+    SMIRNOFF_PLUGINS_AVAILABLE = False
 
 
 def _compute_energy(
@@ -252,6 +259,10 @@ def test_convert_lj_potential_with_exceptions(with_exception):
     )
 
 
+@pytest.mark.skipif(
+    not SMIRNOFF_PLUGINS_AVAILABLE,
+    reason="Requires SMIRNOFF plugins to be installed.",
+)
 def test_convert_to_openmm_system_dexp_periodic(test_data_dir):
     ff = openff.toolkit.ForceField(
         str(test_data_dir / "de-ff.offxml"), load_plugins=True
