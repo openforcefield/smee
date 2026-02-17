@@ -9,7 +9,18 @@ on:
   pull_request: { branches: [ "main" ] }
 
 jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Run pre-commit
+      uses: pre-commit/action@v3.0.1
+
   test:
+    needs: pre-commit
     strategy:
       matrix:
         include:
