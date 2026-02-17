@@ -33,7 +33,6 @@ jobs:
         pixi-version: v0.62.2
         cache: true
         environments: default pydantic-1-cpu
-        frozen: true
 
     - name: Run tests with pydantic >=2
       run: |
