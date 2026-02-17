@@ -89,7 +89,7 @@ absolv = ">=1.0.1"
 jupyter = "*"
 nbconvert = "*"
 nglview = "*"
-smirnoff-plugins = ">=0.0.4"
+smirnoff-plugins = ">=2025.09.0"
 
 [tool.pixi.feature.dev.dependencies]
 ambertools = "*"
