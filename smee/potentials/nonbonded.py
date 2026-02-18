@@ -151,7 +151,6 @@ def _compute_pairwise_periodic(
     # but we need to track which have been reversed so we can reverse the deltas
     pair_idxs, indices = pair_idxs.sort(dim=0)
     reversed = -(indices[0] == 1).to(deltas.dtype)
-    
     deltas = deltas * reversed[:, None]
 
     return PairwiseDistances(pair_idxs.T.contiguous(), deltas, distances, cutoff)
