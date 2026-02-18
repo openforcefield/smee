@@ -26,12 +26,12 @@ from smee.potentials.nonbonded import (
 )
 
 
-def _compute_openmm_energy(
+def _compute_openmm_energy_and_forces(
     system: smee.TensorSystem,
     coords: torch.Tensor,
     box_vectors: torch.Tensor | None,
     potential: smee.TensorPotential,
-) -> torch.Tensor:
+) -> tuple[torch.Tensor, torch.Tensor]:
     coords = coords.numpy() * openmm.unit.angstrom
 
     if box_vectors is not None:
@@ -54,10 +54,14 @@ def _compute_openmm_energy(
 
     omm_context.setPositions(coords)
 
-    omm_energy = omm_context.getState(getEnergy=True).getPotentialEnergy()
+    state = omm_context.getState(getEnergy=True, getForces=True)
+    omm_energy = state.getPotentialEnergy()
     omm_energy = omm_energy.value_in_unit(openmm.unit.kilocalories_per_mole)
 
-    return torch.tensor(omm_energy, dtype=torch.float64)
+    omm_forces = state.getForces(asNumpy=True).value_in_unit(
+        openmm.unit.kilocalorie_per_mole / openmm.unit.angstrom
+    )
+    return torch.tensor(omm_energy, dtype=torch.float64), torch.tensor(omm_forces, dtype=torch.float64)
 
 
 def _parameter_key_to_idx(potential: smee.TensorPotential, key: str):
@@ -332,14 +336,17 @@ def test_compute_xxx_energy_periodic(
     vdw_potential = convert_fn(tensor_ff.potentials_by_type["vdW"])
     vdw_potential.parameters.requires_grad = True
 
+    coords.requires_grad = True
     energy = energy_fn(tensor_sys, vdw_potential, coords.float(), box_vectors.float())
+    forces = -torch.autograd.grad(energy, coords, retain_graph=True)[0].to(torch.float64)
     energy.backward()
 
-    expected_energy = _compute_openmm_energy(
-        tensor_sys, coords, box_vectors, vdw_potential
+    expected_energy, expected_forces = _compute_openmm_energy_and_forces(
+        tensor_sys, coords.detach(), box_vectors, vdw_potential
     )
 
     assert torch.isclose(energy, expected_energy, atol=1.0e-3)
+    assert torch.allclose(forces, expected_forces, atol=1.0e-3)
 
 
 @pytest.mark.parametrize(
@@ -366,12 +373,15 @@ def test_compute_xxx_energy_non_periodic(energy_fn, convert_fn, with_exceptions)
     vdw_potential = convert_fn(tensor_ff.potentials_by_type["vdW"])
     vdw_potential.parameters.requires_grad = True
 
+    coords.requires_grad = True
     energy = energy_fn(tensor_sys, vdw_potential, coords.float(), None)
+    forces = -torch.autograd.grad(energy, coords, retain_graph=True)[0]
     energy.backward()
 
-    expected_energy = _compute_openmm_energy(tensor_sys, coords, None, vdw_potential)
+    expected_energy, expected_forces = _compute_openmm_energy_and_forces(tensor_sys, coords.detach(), None, vdw_potential)
 
     assert torch.isclose(energy, expected_energy, atol=1.0e-5)
+    assert torch.allclose(forces, expected_forces, atol=1.0e-5)
 
 
 def _expected_energy_lj_exceptions(params: dict[str, smee.tests.utils.LJParam]):
@@ -504,14 +514,17 @@ def test_compute_coulomb_energy_periodic(etoh_water_system):
     coulomb_potential = tensor_ff.potentials_by_type["Electrostatics"]
     coulomb_potential.parameters.requires_grad = True
 
+    coords.requires_grad = True
     energy = compute_coulomb_energy(tensor_sys, coulomb_potential, coords, box_vectors)
+    forces = -torch.autograd.grad(energy, coords, retain_graph=True)[0].to(torch.float64)
     energy.backward()
 
-    expected_energy = _compute_openmm_energy(
-        tensor_sys, coords, box_vectors, coulomb_potential
+    expected_energy, expected_forces = _compute_openmm_energy_and_forces(
+        tensor_sys, coords.detach(), box_vectors, coulomb_potential
     )
 
     assert torch.isclose(energy, expected_energy, atol=1.0e-2)
+    assert torch.allclose(forces, expected_forces, atol=1.0e-2)
 
 
 def test_compute_coulomb_energy_non_periodic():
@@ -524,9 +537,12 @@ def test_compute_coulomb_energy_non_periodic():
     coulomb_potential = tensor_ff.potentials_by_type["Electrostatics"]
     coulomb_potential.parameters.requires_grad = True
 
+    coords.requires_grad = True
     energy = compute_coulomb_energy(tensor_sys, coulomb_potential, coords.float(), None)
-    expected_energy = _compute_openmm_energy(
-        tensor_sys, coords, None, coulomb_potential
+    forces = -torch.autograd.grad(energy, coords, retain_graph=True)[0]
+    expected_energy, expected_forces = _compute_openmm_energy_and_forces(
+        tensor_sys, coords.detach(), None, coulomb_potential
     )
 
     assert torch.isclose(energy, expected_energy, atol=1.0e-4)
+    assert torch.allclose(forces, expected_forces, atol=1.0e-4)
