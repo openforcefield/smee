@@ -144,9 +144,15 @@ def _compute_pairwise_periodic(
 
     are_interacting = ~torch.isnan(distances)
 
-    pair_idxs, _ = pair_idxs[:, are_interacting].sort(dim=0)
     distances = distances[are_interacting]
     deltas = deltas[are_interacting, :]
+    pair_idxs = pair_idxs[:, are_interacting]
+    # we sort the indices to get values correponding to upper triangles
+    # but we need to track which have been reversed so we can reverse the deltas
+    pair_idxs, indices = pair_idxs.sort(dim=0)
+    reversed = -(indices[0] == 1).to(deltas.dtype)
+    
+    deltas = deltas * reversed[:, None]
 
     return PairwiseDistances(pair_idxs.T.contiguous(), deltas, distances, cutoff)
 
