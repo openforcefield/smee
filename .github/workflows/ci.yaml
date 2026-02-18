@@ -19,7 +19,7 @@ jobs:
     - name: Run pre-commit
       uses: pre-commit/action@v3.0.1
 
-  test:
+  test-matrix:
     needs: pre-commit
     strategy:
       matrix:
@@ -65,3 +65,16 @@ jobs:
         file: ./coverage.xml
         flags: unittests
         token: ${{ secrets.CODECOV_TOKEN }}
+
+  test:
+    needs: test-matrix
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+    - name: Check test matrix result
+      run: |
+        if [[ "${{ needs.test-matrix.result }}" != "success" ]]; then
+          echo "One or more test matrix jobs failed or were cancelled."
+          exit 1
+        fi
