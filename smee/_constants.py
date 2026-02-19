@@ -43,6 +43,7 @@ class EnergyFn(_StrEnum):
     """An enumeration of the energy functions supported by ``smee`` out of the box."""
 
     COULOMB = "coul"
+    POLARIZATION = "coul+pol"
 
     VDW_LJ = "4*epsilon*((sigma/r)**12-(sigma/r)**6)"
     VDW_DEXP = (
@@ -51,6 +52,7 @@ class EnergyFn(_StrEnum):
         "alpha/(alpha-beta)*exp(beta*(1-r/r_min)))"
     )
     # VDW_BUCKINGHAM = "a*exp(-b*r)-c*r^-6"
+    VDW_DAMPEDEXP6810 = "force_at_zero*beta**-1*exp(-beta*(r-rho))-f_6(beta*r)*c6**6-f_8(beta*r)*c8**8-f_10(beta*r)*c10**10"
 
     BOND_HARMONIC = "k/2*(r-length)**2"
 

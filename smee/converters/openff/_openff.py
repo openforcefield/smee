@@ -71,6 +71,26 @@ def _get_value(
 ) -> float:
     """Returns the value of a parameter in its default units"""
     default_units = default_units[parameter]
+    
+    # Handle missing parameters by using default values
+    if parameter not in potential.parameters:
+        if default_value is None:
+            # Set specific defaults for known multipole parameters
+            if parameter == "thole":
+                default_value = 0.39 * openff.units.unit.dimensionless
+            elif parameter == "dampingFactor":
+                # Will be computed from polarizability if not provided
+                return 0.0  # Placeholder, will be computed later
+            elif parameter.startswith("dipole"):
+                default_value = 0.0 * openff.units.unit.elementary_charge * openff.units.unit.angstrom
+            elif parameter.startswith("quadrupole"):
+                default_value = 0.0 * openff.units.unit.elementary_charge * openff.units.unit.angstrom**2
+            elif parameter in ["axisType", "multipoleAtomZ", "multipoleAtomX", "multipoleAtomY"]:
+                default_value = -1 * openff.units.unit.dimensionless  # -1 indicates undefined
+            else:
+                raise KeyError(f"Parameter '{parameter}' not found and no default provided")
+        return default_value.m_as(default_units)
+    
     value = potential.parameters[parameter]
     return (value if value is not None else default_value).m_as(default_units)
 

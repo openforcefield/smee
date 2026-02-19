@@ -4,6 +4,7 @@ import collections
 import math
 import typing
 
+import numpy as np
 import openff.units
 import torch
 
@@ -794,6 +795,163 @@ def compute_dexp_energy(
     )
 
     return energy
+
+
+def _compute_dampedexp6810_lrc(
+    system: smee.TensorSystem,
+    potential: smee.TensorPotential,
+    rs: torch.Tensor | None,
+    rc: torch.Tensor | None,
+    volume: torch.Tensor,
+) -> torch.Tensor:
+    """Computes the long range dispersion correction due to the double exponential
+    potential, possibly with a switching function."""
+
+    raise NotImplementedError
+
+
+@smee.potentials.potential_energy_fn(
+    smee.PotentialType.VDW, smee.EnergyFn.VDW_DAMPEDEXP6810
+)
+def compute_dampedexp6810_energy(
+    system: smee.TensorSystem,
+    potential: smee.TensorPotential,
+    conformer: torch.Tensor,
+    box_vectors: torch.Tensor | None = None,
+    pairwise: PairwiseDistances | None = None,
+) -> torch.Tensor:
+    """Compute the potential energy [kcal / mol] of the vdW interactions using the
+    DampedExp6810 potential.
+
+    Notes:
+        * No cutoff function will be applied if the system is not periodic.
+
+    Args:
+        system: The system to compute the energy for.
+        potential: The potential energy function to evaluate.
+        conformer: The conformer [Å] to evaluate the potential at with
+            ``shape=(n_confs, n_particles, 3)`` or ``shape=(n_particles, 3)``.
+        box_vectors: The box vectors [Å] of the system with ``shape=(n_confs, 3, 3)``
+            or ``shape=(3, 3)`` if the system is periodic, or ``None`` otherwise.
+        pairwise: Pre-computed distances between each pair of particles
+            in the system.
+
+    Returns:
+        The evaluated potential energy [kcal / mol].
+    """
+    box_vectors = None if not system.is_periodic else box_vectors
+
+    cutoff = potential.attributes[potential.attribute_cols.index(smee.CUTOFF_ATTRIBUTE)]
+
+    pairwise = (
+        pairwise
+        if pairwise is not None
+        else compute_pairwise(system, conformer, box_vectors, cutoff)
+    )
+
+    if system.is_periodic and not torch.isclose(pairwise.cutoff, cutoff):
+        raise ValueError("the pairwise cutoff does not match the potential.")
+
+    parameters = smee.potentials.broadcast_parameters(system, potential)
+    pair_scales = compute_pairwise_scales(system, potential)
+
+    pairs_1d = smee.utils.to_upper_tri_idx(
+        pairwise.idxs[:, 0], pairwise.idxs[:, 1], len(parameters)
+    )
+    pair_scales = pair_scales[pairs_1d]
+
+    rho_column = potential.parameter_cols.index("rho")
+    beta_column = potential.parameter_cols.index("beta")
+    c6_column = potential.parameter_cols.index("c6")
+    c8_column = potential.parameter_cols.index("c8")
+    c10_column = potential.parameter_cols.index("c10")
+
+    rho_a = parameters[pairwise.idxs[:, 0], rho_column]
+    rho_b = parameters[pairwise.idxs[:, 1], rho_column]
+    beta_a = parameters[pairwise.idxs[:, 0], beta_column]
+    beta_b = parameters[pairwise.idxs[:, 1], beta_column]
+    c6_a = parameters[pairwise.idxs[:, 0], c6_column]
+    c6_b = parameters[pairwise.idxs[:, 1], c6_column]
+    c8_a = parameters[pairwise.idxs[:, 0], c8_column]
+    c8_b = parameters[pairwise.idxs[:, 1], c8_column]
+    c10_a = parameters[pairwise.idxs[:, 0], c10_column]
+    c10_b = parameters[pairwise.idxs[:, 1], c10_column]
+
+    rho = 0.5 * (rho_a + rho_b)
+    beta = 2.0 * beta_a * beta_b / (beta_a + beta_b)
+    c6 = smee.utils.geometric_mean(c6_a, c6_b)
+    c8 = smee.utils.geometric_mean(c8_a, c8_b)
+    c10 = smee.utils.geometric_mean(c10_a, c10_b)
+
+    if potential.exceptions is not None:
+        exception_idxs, exceptions = smee.potentials.broadcast_exceptions(
+            system, potential, pairwise.idxs[:, 0], pairwise.idxs[:, 1]
+        )
+
+        rho = rho.clone()  # prevent in-place modification
+        beta = beta.clone()
+        c6 = c6.clone()
+        c8 = c8.clone()
+        c10 = c10.clone()
+
+        rho[exception_idxs] = exceptions[:, rho_column]
+        beta[exception_idxs] = exceptions[:, beta_column]
+        c6[exception_idxs] = exceptions[:, c6_column]
+        c8[exception_idxs] = exceptions[:, c8_column]
+        c10[exception_idxs] = exceptions[:, c10_column]
+
+    force_at_zero = potential.attributes[
+        potential.attribute_cols.index("force_at_zero")
+    ]
+
+    x = pairwise.distances
+
+    invR = 1.0 / x
+    br = beta * x
+    expbr = torch.exp(-beta * x)
+
+    ttdamp6_sum = (
+        1.0 + br + br**2 / 2 + br**3 / 6 + br**4 / 24 + br**5 / 120 + br**6 / 720
+    )
+    ttdamp8_sum = ttdamp6_sum + br**7 / 5040 + br**8 / 40320
+    ttdamp10_sum = ttdamp8_sum + br**9 / 362880 + br**10 / 3628800
+
+    ttdamp6 = 1.0 - expbr * ttdamp6_sum
+    ttdamp8 = 1.0 - expbr * ttdamp8_sum
+    ttdamp10 = 1.0 - expbr * ttdamp10_sum
+
+    repulsion = force_at_zero * 1.0 / beta * torch.exp(-beta * (x - rho))
+    energies = (
+        repulsion
+        - ttdamp6 * c6 * x**-6
+        - ttdamp8 * c8 * x**-8
+        - ttdamp10 * c10 * x**-10
+    )
+
+    # Apply exclusion scaling factors
+    energies *= pair_scales
+
+    if not system.is_periodic:
+        return energies.sum(-1)
+
+    switch_fn, switch_width = _compute_switch_fn(potential, pairwise)
+    energies *= switch_fn
+
+    energy = energies.sum(-1)
+
+    energy += _compute_dampedexp6810_lrc(
+        system,
+        potential.to(precision="double"),
+        switch_width.double(),
+        pairwise.cutoff.double(),
+        torch.det(box_vectors),
+    )
+
+    return energy
+
+
+# Import compute_multipole_energy from the new multipole module
+from smee.potentials.multipole import compute_multipole_energy
 
 
 def _compute_pme_exclusions(

@@ -7,6 +7,7 @@ import torch
 import smee
 import smee.converters
 from smee.converters.openff.nonbonded import (
+    convert_dampedexp6810,
     convert_dexp,
     convert_electrostatics,
     convert_vdw,
@@ -312,3 +313,24 @@ def test_convert_dexp(ethanol, test_data_dir):
 
     assert potential.type == "vdW"
     assert potential.fn == smee.EnergyFn.VDW_DEXP
+
+
+def test_convert_dampedexp6810(ethanol, test_data_dir):
+    ff = openff.toolkit.ForceField(
+        str(test_data_dir / "PHAST-H2CNO-nonpolar-2.0.0.offxml"), load_plugins=True
+    )
+
+    interchange = openff.interchange.Interchange.from_smirnoff(
+        ff, ethanol.to_topology()
+    )
+    vdw_collection = interchange.collections["DampedExp6810"]
+
+    potential, parameter_maps = convert_dampedexp6810(
+        [vdw_collection], [ethanol.to_topology()], [None]
+    )
+
+    assert potential.attribute_cols[-1] == "force_at_zero"
+    assert potential.parameter_cols == ("rho", "beta", "c6", "c8", "c10")
+
+    assert potential.type == "vdW"
+    assert potential.fn == smee.EnergyFn.VDW_DAMPEDEXP6810

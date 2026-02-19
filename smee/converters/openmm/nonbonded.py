@@ -7,6 +7,8 @@ import typing
 import openmm
 import torch
 
+from tholedipoleplugin import TholeDipoleForce
+
 import smee
 import smee.converters.openmm
 import smee.potentials.nonbonded
@@ -22,9 +24,9 @@ _T = typing.TypeVar("_T", bound=openmm.NonbondedForce | openmm.CustomNonbondedFo
 
 
 def _create_nonbonded_force(
-    potential: smee.TensorPotential,
-    system: smee.TensorSystem,
-    cls: typing.Type[_T] = openmm.NonbondedForce,
+        potential: smee.TensorPotential,
+        system: smee.TensorSystem,
+        cls: typing.Type[_T] = openmm.NonbondedForce,
 ) -> _T:
     """Create a non-bonded force for a given potential and system, making sure to set
     the appropriate method and cutoffs."""
@@ -71,10 +73,10 @@ def _create_nonbonded_force(
 
 
 def _eval_mixing_fn(
-    potential: smee.TensorPotential,
-    mixing_fn: dict[str, str],
-    param_1: torch.Tensor,
-    param_2: torch.Tensor,
+        potential: smee.TensorPotential,
+        mixing_fn: dict[str, str],
+        param_1: torch.Tensor,
+        param_2: torch.Tensor,
 ) -> dict[str, float]:
     import symengine
 
@@ -96,8 +98,8 @@ def _eval_mixing_fn(
 
 
 def _build_vdw_lookup(
-    potential: smee.TensorPotential,
-    mixing_fn: dict[str, str],
+        potential: smee.TensorPotential,
+        mixing_fn: dict[str, str],
 ) -> dict[str, list[float]]:
     """Build the ``n_param x n_param`` vdW parameter lookup table containing
     parameters for all interactions.
@@ -155,7 +157,7 @@ def _prepend_scale_to_energy_fn(fn: str, scale_var: str = _INTRA_SCALE_VAR) -> s
 
 
 def _detect_parameters(
-    potential: smee.TensorPotential, energy_fn: str, mixing_fn: dict[str, str]
+        potential: smee.TensorPotential, energy_fn: str, mixing_fn: dict[str, str]
 ) -> tuple[list[str], list[str]]:
     """Detect the required parameters and attributes for a given energy function
     and associated mixing rules."""
@@ -209,7 +211,7 @@ def _detect_parameters(
 
 
 def _extract_parameters(
-    potential: smee.TensorPotential, parameter: torch.Tensor, cols: list[str]
+        potential: smee.TensorPotential, parameter: torch.Tensor, cols: list[str]
 ) -> list[float]:
     """Extract the values of a subset of parameters from a parameter tensor."""
 
@@ -230,13 +232,13 @@ def _extract_parameters(
 
 
 def _add_parameters_to_vdw_without_lookup(
-    potential: smee.TensorPotential,
-    system: smee.TensorSystem,
-    energy_fn: str,
-    mixing_fn: dict[str, str],
-    inter_force: openmm.CustomNonbondedForce,
-    intra_force: openmm.CustomBondForce,
-    used_parameters: list[str],
+        potential: smee.TensorPotential,
+        system: smee.TensorSystem,
+        energy_fn: str,
+        mixing_fn: dict[str, str],
+        inter_force: openmm.CustomNonbondedForce,
+        intra_force: openmm.CustomBondForce,
+        used_parameters: list[str],
 ):
     """Add parameters to a vdW force directly, i.e. without using a lookup table."""
 
@@ -292,12 +294,12 @@ def _add_parameters_to_vdw_without_lookup(
 
 
 def _add_parameters_to_vdw_with_lookup(
-    potential: smee.TensorPotential,
-    system: smee.TensorSystem,
-    energy_fn: str,
-    mixing_fn: dict[str, str],
-    inter_force: openmm.CustomNonbondedForce,
-    intra_force: openmm.CustomBondForce,
+        potential: smee.TensorPotential,
+        system: smee.TensorSystem,
+        energy_fn: str,
+        mixing_fn: dict[str, str],
+        inter_force: openmm.CustomNonbondedForce,
+        intra_force: openmm.CustomBondForce,
 ):
     """Add parameters to a vdW force, explicitly defining all pairwise parameters
     using a lookup table."""
@@ -356,10 +358,10 @@ def _add_parameters_to_vdw_with_lookup(
 
 
 def convert_custom_vdw_potential(
-    potential: smee.TensorPotential,
-    system: smee.TensorSystem,
-    energy_fn: str,
-    mixing_fn: dict[str, str],
+        potential: smee.TensorPotential,
+        system: smee.TensorSystem,
+        energy_fn: str,
+        mixing_fn: dict[str, str],
 ) -> tuple[openmm.CustomNonbondedForce, openmm.CustomBondForce]:
     """Converts an arbitrary vdW potential to OpenMM forces.
 
@@ -444,7 +446,7 @@ def convert_custom_vdw_potential(
     smee.PotentialType.VDW, smee.EnergyFn.VDW_LJ
 )
 def convert_lj_potential(
-    potential: smee.TensorPotential, system: smee.TensorSystem
+        potential: smee.TensorPotential, system: smee.TensorSystem
 ) -> openmm.NonbondedForce | list[openmm.CustomNonbondedForce | openmm.CustomBondForce]:
     """Convert a Lennard-Jones potential to an OpenMM force.
 
@@ -501,7 +503,7 @@ def convert_lj_potential(
     smee.PotentialType.VDW, smee.EnergyFn.VDW_DEXP
 )
 def convert_dexp_potential(
-    potential: smee.TensorPotential, system: smee.TensorSystem
+        potential: smee.TensorPotential, system: smee.TensorSystem
 ) -> tuple[openmm.CustomNonbondedForce, openmm.CustomBondForce]:
     """Convert a DEXP potential to OpenMM forces.
 
@@ -527,10 +529,211 @@ def convert_dexp_potential(
 
 
 @smee.converters.openmm.potential_converter(
+    smee.PotentialType.VDW, smee.EnergyFn.VDW_DAMPEDEXP6810
+)
+def convert_dampedexp6810_potential(
+        potential: smee.TensorPotential, system: smee.TensorSystem
+) -> tuple[openmm.CustomNonbondedForce, openmm.CustomBondForce]:
+    """Convert a DampedExp6810 potential to OpenMM forces.
+
+    The intermolcular interactions are described by a custom nonbonded force, while the
+    intramolecular interactions are described by a custom bond force.
+
+    If the potential has custom mixing rules (i.e. exceptions), a lookup table will be
+    used to store the parameters. Otherwise, the mixing rules will be applied directly
+    in the energy function.
+    """
+    energy_fn = (
+        "repulsion - ttdamp6*c6*invR^6 - ttdamp8*c8*invR^8 - ttdamp10*c10*invR^10;"
+        "repulsion = force_at_zero*invbeta*exp(-beta*(r-rho));"
+        "ttdamp10 = select(expbr, 1.0 - expbr * ttdamp10Sum, 1);"
+        "ttdamp8 = select(expbr, 1.0 - expbr * ttdamp8Sum, 1);"
+        "ttdamp6 = select(expbr, 1.0 - expbr * ttdamp6Sum, 1);"
+        "ttdamp10Sum = ttdamp8Sum + br^9/362880 + br^10/3628800;"
+        "ttdamp8Sum = ttdamp6Sum + br^7/5040 + br^8/40320;"
+        "ttdamp6Sum = 1.0 + br + br^2/2 + br^3/6 + br^4/24 + br^5/120 + br^6/720;"
+        "expbr = exp(-br);"
+        "br = beta*r;"
+        "invR = 1.0/r;"
+        "invbeta = 1.0/beta;"
+    )
+    mixing_fn = {
+        "beta": "2.0 * beta1 * beta2 / (beta1 + beta2)",
+        "rho": "0.5 * (rho1 + rho2)",
+        "c6": "sqrt(c61*c62)",
+        "c8": "sqrt(c81*c82)",
+        "c10": "sqrt(c101*c102)",
+    }
+
+    return convert_custom_vdw_potential(potential, system, energy_fn, mixing_fn)
+
+
+@smee.converters.openmm.potential_converter(
+    smee.PotentialType.ELECTROSTATICS, smee.EnergyFn.POLARIZATION
+)
+def convert_multipole_potential(
+        potential: smee.TensorPotential, system: smee.TensorSystem
+) -> TholeDipoleForce:
+    """Convert a Multipole potential to OpenMM TholeDipoleForce.
+
+    TholeDipole parameter layout (9 columns):
+        Column 0: charge (e)
+        Columns 1-3: molecularDipole (e·Å, x, y, z)
+        Column 4: axisType (int, 0-5)
+        Column 5: multipoleAtomZ (int)
+        Column 6: multipoleAtomX (int)
+        Column 7: multipoleAtomY (int)
+        Column 8: polarity (Å³)
+    """
+    cutoff_idx = potential.attribute_cols.index(smee.CUTOFF_ATTRIBUTE)
+    cutoff = float(potential.attributes[cutoff_idx]) * 0.1  # Å to nm
+
+    force = TholeDipoleForce()
+
+    if system.is_periodic:
+        force.setNonbondedMethod(TholeDipoleForce.PME)
+    else:
+        force.setNonbondedMethod(TholeDipoleForce.NoCutoff)
+
+    force.setPolarizationType(TholeDipoleForce.Mutual)
+    force.setCutoffDistance(cutoff)
+    force.setEwaldErrorTolerance(0.0001)
+    force.setMutualInducedTargetEpsilon(0.00001)
+    force.setMutualInducedMaxIterations(60)
+    force.setExtrapolationCoefficients([-0.154, 0.017, 0.658, 0.474])
+    force.setTholeDampingType(TholeDipoleForce.Amoeba)
+    force.setTholeDampingParameter(0.39)
+
+    # Map AMOEBA axis types to TholeDipole axis types
+    # AMOEBA: NoAxisType=0, ZOnly=1, ZThenX=2, Bisector=3, ZBisect=4, ThreeFold=5
+    # TholeDipole: ZThenX=0, Bisector=1, ZBisect=2, ThreeFold=3, ZOnly=4, NoAxisType=5
+    amoeba_to_thole_axis = {
+        0: TholeDipoleForce.NoAxisType,   # AMOEBA NoAxisType -> TholeDipole NoAxisType
+        1: TholeDipoleForce.ZOnly,         # AMOEBA ZOnly -> TholeDipole ZOnly
+        2: TholeDipoleForce.ZThenX,        # AMOEBA ZThenX -> TholeDipole ZThenX
+        3: TholeDipoleForce.Bisector,      # AMOEBA Bisector -> TholeDipole Bisector
+        4: TholeDipoleForce.ZBisect,       # AMOEBA ZBisect -> TholeDipole ZBisect
+        5: TholeDipoleForce.ThreeFold,     # AMOEBA ThreeFold -> TholeDipole ThreeFold
+    }
+
+    idx_offset = 0
+
+    for topology, n_copies in zip(system.topologies, system.n_copies):
+        parameter_map = topology.parameters[potential.type]
+        parameters = parameter_map.assignment_matrix @ potential.parameters
+        parameters = parameters.detach()
+
+        n_particles = topology.n_particles
+        n_params = parameters.shape[1]
+
+        for _ in range(n_copies):
+            for atom_idx in range(n_particles):
+                # Get charge from first n_particles rows
+                charge = float(parameters[atom_idx, 0])
+
+                # Get dipole, axisType, frame atoms, polarity from rows n_particles to 2*n_particles
+                if parameters.shape[0] > n_particles:
+                    pol_row = parameters[n_particles + atom_idx]
+
+                    if n_params == 20:
+                        # AMOEBA-style 20-column layout (current PHAST force field):
+                        # Col 0: charge, 1-3: dipole, 4-12: quadrupole (ignored)
+                        # Col 13: axisType, 14-16: atomZ/X/Y, 17: thole, 18: dampingFactor, 19: polarity
+                        dipole = [float(pol_row[1]) * 0.1, float(pol_row[2]) * 0.1, float(pol_row[3]) * 0.1]  # e·Å to e·nm
+                        amoeba_axis_type = int(pol_row[13])
+                        atom_z = int(pol_row[14])
+                        atom_x = int(pol_row[15])
+                        atom_y = int(pol_row[16])
+                        polarity = float(pol_row[19]) * 0.001  # Å³ to nm³
+
+                        # Map axis type, but force NoAxisType if no valid axis atoms
+                        if atom_z < 0:
+                            axis_type = TholeDipoleForce.NoAxisType
+                        else:
+                            axis_type = amoeba_to_thole_axis.get(amoeba_axis_type, TholeDipoleForce.NoAxisType)
+                    elif n_params == 9:
+                        # TholeDipole 9-column layout:
+                        # Col 0: charge, 1-3: dipole, 4: axisType, 5-7: atomZ/X/Y, 8: polarity
+                        dipole = [float(pol_row[1]) * 0.1, float(pol_row[2]) * 0.1, float(pol_row[3]) * 0.1]
+                        axis_type = int(pol_row[4])
+                        atom_z = int(pol_row[5])
+                        atom_x = int(pol_row[6])
+                        atom_y = int(pol_row[7])
+                        polarity = float(pol_row[8]) * 0.001
+                    else:
+                        # Fallback: assume dipole at 1-3, polarity at last column
+                        dipole = [float(pol_row[1]) * 0.1, float(pol_row[2]) * 0.1, float(pol_row[3]) * 0.1]
+                        axis_type = TholeDipoleForce.NoAxisType
+                        atom_z = -1
+                        atom_x = -1
+                        atom_y = -1
+                        polarity = float(pol_row[n_params - 1]) * 0.001 if n_params > 4 else 0.0
+                else:
+                    dipole = [0.0, 0.0, 0.0]
+                    axis_type = TholeDipoleForce.NoAxisType
+                    atom_z = -1
+                    atom_x = -1
+                    atom_y = -1
+                    polarity = 0.0
+
+                # The axis atom indices in the parameters are now actual 0-based topology indices
+                # (resolved from SMIRKS indices during OpenFF conversion). We just need to
+                # add the idx_offset for the current molecule copy.
+                force.addParticle(
+                    charge,
+                    dipole,
+                    polarity,
+                    axis_type,
+                    int(atom_z) + idx_offset if atom_z >= 0 else -1,
+                    int(atom_x) + idx_offset if atom_x >= 0 else -1,
+                    int(atom_y) + idx_offset if atom_y >= 0 else -1,
+                )
+
+            # Set up covalent maps (TholeDipole uses 4 types: Covalent12-15)
+            covalent_12_maps = {}
+            covalent_13_maps = {}
+            covalent_14_maps = {}
+            covalent_15_maps = {}
+
+            for (i, j), scale_idx in zip(parameter_map.exclusions, parameter_map.exclusion_scale_idxs):
+                i = int(i) + idx_offset
+                j = int(j) + idx_offset
+
+                if scale_idx == 0:  # 1-2 interactions
+                    covalent_maps = covalent_12_maps
+                elif scale_idx == 1:  # 1-3 interactions
+                    covalent_maps = covalent_13_maps
+                elif scale_idx == 2:  # 1-4 interactions
+                    covalent_maps = covalent_14_maps
+                else:  # 1-5+ interactions
+                    covalent_maps = covalent_15_maps
+
+                if i not in covalent_maps:
+                    covalent_maps[i] = []
+                if j not in covalent_maps:
+                    covalent_maps[j] = []
+                covalent_maps[i].append(j)
+                covalent_maps[j].append(i)
+
+            for i, atoms in covalent_12_maps.items():
+                force.setCovalentMap(i, TholeDipoleForce.Covalent12, atoms)
+            for i, atoms in covalent_13_maps.items():
+                force.setCovalentMap(i, TholeDipoleForce.Covalent13, atoms)
+            for i, atoms in covalent_14_maps.items():
+                force.setCovalentMap(i, TholeDipoleForce.Covalent14, atoms)
+            for i, atoms in covalent_15_maps.items():
+                force.setCovalentMap(i, TholeDipoleForce.Covalent15, atoms)
+
+            idx_offset += n_particles
+
+    return force
+
+
+@smee.converters.openmm.potential_converter(
     smee.PotentialType.ELECTROSTATICS, smee.EnergyFn.COULOMB
 )
 def convert_coulomb_potential(
-    potential: smee.TensorPotential, system: smee.TensorSystem
+        potential: smee.TensorPotential, system: smee.TensorSystem
 ) -> openmm.NonbondedForce:
     """Convert a Coulomb potential to an OpenMM force."""
     force = _create_nonbonded_force(potential, system)

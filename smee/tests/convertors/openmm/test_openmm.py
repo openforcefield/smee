@@ -291,6 +291,45 @@ def test_convert_to_openmm_system_dexp_periodic(test_data_dir):
     )
 
 
+def test_convert_to_openmm_system_damped6810_periodic(test_data_dir):
+    ff = openff.toolkit.ForceField(
+        str(test_data_dir / "PHAST-H2CNO-nonpolar-2.0.0.offxml"), load_plugins=True
+    )
+    top = openff.toolkit.Topology()
+
+    interchanges = []
+
+    n_copies_per_mol = [5, 5]
+
+    for smiles, n_copies in zip(["OCCO", "O"], n_copies_per_mol):
+        mol = openff.toolkit.Molecule.from_smiles(smiles)
+        mol.generate_conformers(n_conformers=1)
+
+        interchange = openff.interchange.Interchange.from_smirnoff(
+            ff, mol.to_topology()
+        )
+        interchanges.append(interchange)
+
+        for _ in range(n_copies):
+            top.add_molecule(mol)
+
+    tensor_ff, tensor_tops = smee.converters.convert_interchange(interchanges)
+    tensor_system = smee.TensorSystem(tensor_tops, n_copies_per_mol, True)
+
+    coords, _ = smee.mm.generate_system_coords(
+        tensor_system, None, smee.mm.GenerateCoordsConfig()
+    )
+    box_vectors = numpy.eye(3) * 20.0 * openmm.unit.angstrom
+
+    top.box_vectors = box_vectors
+
+    interchange_top = openff.interchange.Interchange.from_smirnoff(ff, top)
+
+    _compare_smee_and_interchange(
+        tensor_ff, tensor_system, interchange_top, coords, box_vectors
+    )
+
+
 def test_convert_to_openmm_topology():
     formaldehyde_interchange = openff.interchange.Interchange.from_smirnoff(
         openff.toolkit.ForceField("openff-2.0.0.offxml"),
