@@ -19,7 +19,7 @@ jobs:
       with:
         pixi-version: v0.62.2
         cache: true
-        environments: cpu pydantic-1-cpu
+        environments: default
 
     - name: Determine Version
       shell: bash
@@ -44,4 +44,4 @@ jobs:
         git fetch --all --prune
         git pull origin gh-pages --allow-unrelated-histories
 
-        pixi run -e cpu mike deploy --push --update-aliases $VERSION
+        pixi run -e default mike deploy --push --update-aliases $VERSION
