@@ -1472,11 +1472,11 @@
 </p>
 
 <hr />
-<p>The <code>smee</code> framework aims to offer a simple API for differentiably evaluating the energy of <a href="https://openforcefield.github.io/standards/standards/smirnoff/">SMIRNOFF</a> 
+<p>The <code>smee</code> framework aims to offer a simple API for differentiably evaluating the energy of <a href="https://openforcefield.github.io/standards/standards/smirnoff/">SMIRNOFF</a>
 force fields applied to molecules using <code>pytorch</code>.</p>
-<p>The package currently supports evaluating the energy of force fields that contain: </p>
+<p>The package currently supports evaluating the energy of force fields that contain:</p>
 <ul>
-<li><code>Bonds</code>, <code>Angles</code>, <code>ProperTorsions</code> and <code>ImproperTorsions</code> </li>
+<li><code>Bonds</code>, <code>Angles</code>, <code>ProperTorsions</code> and <code>ImproperTorsions</code></li>
 <li><code>vdW</code>, <code>Electrostatics</code>, <code>ToolkitAM1BCC</code>, <code>LibraryCharges</code></li>
 <li><code>VirtualSites</code></li>
 </ul>
@@ -1486,11 +1486,17 @@ force fields applied to molecules using <code>pytorch</code>.</p>
 <li><code>DoubleExponential</code></li>
 </ul>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h2>
-<p>This package can be installed using <code>conda</code> (or <code>mamba</code>, a faster version of <code>conda</code>):</p>
-<div class="language-shell highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>mamba<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>smee
+<p>This package can be installed using <code>pixi</code>:</p>
+<div class="language-shell highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pixi<span class="w"> </span>add<span class="w"> </span>smee
+</span></code></pre></div>
+<p>or using <code>conda</code> / <code>mamba</code>:</p>
+<div class="language-shell highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mamba<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>smee
 </span></code></pre></div>
 <p>The example notebooks further require you install <code>jupyter</code>, <code>nglview</code>, and <code>smirnoff-plugins</code>:</p>
-<div class="language-shell highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mamba<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>jupyter<span class="w"> </span>nglview<span class="w"> </span><span class="s2">&quot;smirnoff-plugins &gt;=0.0.4&quot;</span>
+<div class="language-shell highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pixi<span class="w"> </span>add<span class="w"> </span>jupyter<span class="w"> </span>nglview<span class="w"> </span><span class="s2">&quot;smirnoff-plugins &gt;=0.0.4&quot;</span>
+</span></code></pre></div>
+<p>or with conda/mamba:</p>
+<div class="language-shell highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>mamba<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>jupyter<span class="w"> </span>nglview<span class="w"> </span><span class="s2">&quot;smirnoff-plugins &gt;=0.0.4&quot;</span>
 </span></code></pre></div>
 <h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">#</a></h2>
 <p>To get started, see the <a href="examples">examples</a>.</p>
