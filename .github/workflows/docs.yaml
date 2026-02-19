@@ -42,6 +42,5 @@ jobs:
         git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
 
         git fetch --all --prune
-        git pull origin gh-pages --allow-unrelated-histories
 
         pixi run -e default mike deploy --push --update-aliases $VERSION
