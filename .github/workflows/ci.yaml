@@ -20,6 +20,9 @@ jobs:
       uses: pre-commit/action@v3.0.1
 
   test-matrix:
+    env:
+      OE_LICENSE: ${{ github.workspace }}/oe_license.txt
+      
     needs: pre-commit
     strategy:
       matrix:
@@ -35,6 +38,11 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+
+    - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
+      env:
+        OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
+      run: echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
 
     - name: Setup pixi
       uses: prefix-dev/setup-pixi@v0.9.3
