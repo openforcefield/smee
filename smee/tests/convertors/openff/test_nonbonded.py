@@ -16,9 +16,7 @@ from smee.converters.openff.nonbonded import (
     convert_vdw,
 )
 
-SMIRNOFF_PLUGINS_AVAILABLE = (
-    importlib.util.find_spec("smirnoff_plugins") is not None
-)
+SMIRNOFF_PLUGINS_AVAILABLE = importlib.util.find_spec("smirnoff_plugins") is not None
 
 
 def test_convert_electrostatics_am1bcc(ethanol, ethanol_interchange):

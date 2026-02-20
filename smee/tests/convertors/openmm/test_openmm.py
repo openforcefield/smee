@@ -19,9 +19,7 @@ from smee.converters.openmm import (
     create_openmm_system,
 )
 
-SMIRNOFF_PLUGINS_AVAILABLE = (
-    importlib.util.find_spec("smirnoff_plugins") is not None
-)
+SMIRNOFF_PLUGINS_AVAILABLE = importlib.util.find_spec("smirnoff_plugins") is not None
 
 
 def _compute_energy(
