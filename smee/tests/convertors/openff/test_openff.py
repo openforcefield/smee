@@ -191,7 +191,7 @@ def test_convert_interchange_multiple(
     ethanol_interchange,
     formaldehyde_conformer,
     formaldehyde_interchange,
-    toolkit_registry_rdkit_first
+    toolkit_registry_rdkit_first,
 ):
     with toolkit_registry_manager(toolkit_registry_rdkit_first):
         force_field, topologies = convert_interchange(

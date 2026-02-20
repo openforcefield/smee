@@ -94,7 +94,7 @@ def test_convert_electrostatics_v_site(toolkit_registry_rdkit_first):
     interchange = force_field.create_interchange(
         molecule.to_topology(),
         toolkit_registry=toolkit_registry_rdkit_first,
-        allow_nonintegral_charges=True
+        allow_nonintegral_charges=True,
     )
     charge_collection = interchange.collections["Electrostatics"]
 
@@ -179,7 +179,7 @@ def test_convert_electrostatics_tip4p(toolkit_registry_rdkit_first):
     interchange = force_field.create_interchange(
         molecule.to_topology(),
         toolkit_registry=toolkit_registry_rdkit_first,
-        allow_nonintegral_charges=True
+        allow_nonintegral_charges=True,
     )
 
     tensor_top: smee.TensorTopology
@@ -224,7 +224,8 @@ def test_convert_bci_and_vsite(toolkit_registry_rdkit_first):
     mol.assign_partial_charges(charge_handler.partial_charge_method)
 
     interchange = ff_off.create_interchange(
-        mol.to_topology(), toolkit_registry=toolkit_registry_rdkit_first,
+        mol.to_topology(),
+        toolkit_registry=toolkit_registry_rdkit_first,
     )
 
     expected_charges = [
@@ -302,6 +303,7 @@ def test_convert_vdw(ethanol, ethanol_interchange):
     assert potential.type == "vdW"
     assert potential.fn == smee.EnergyFn.VDW_LJ
 
+
 @pytest.mark.skipif(
     not SMIRNOFF_PLUGINS_AVAILABLE,
     reason="Requires SMIRNOFF plugins to be installed.",
@@ -312,7 +314,8 @@ def test_convert_dexp(ethanol, test_data_dir, toolkit_registry_rdkit_first):
     )
 
     interchange = ff.create_interchange(
-        ethanol.to_topology(), toolkit_registry=toolkit_registry_rdkit_first,
+        ethanol.to_topology(),
+        toolkit_registry=toolkit_registry_rdkit_first,
     )
     vdw_collection = interchange.collections["DoubleExponential"]
 

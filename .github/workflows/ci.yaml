@@ -22,7 +22,7 @@ jobs:
   test-matrix:
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
-      
+
     needs: pre-commit
     strategy:
       matrix:
