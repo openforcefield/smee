@@ -86,6 +86,15 @@ msgpack-python = "*"
 mdtraj = "*"
 absolv = ">=1.0.1"
 
+[tool.pixi.feature.openeye]
+channels = ["openeye"]
+
+[tool.pixi.feature.openeye.dependencies]
+openeye-toolkits = "*"
+
+[tool.pixi.feature.ambertools.dependencies]
+ambertools = "*"
+
 [tool.pixi.feature.examples.dependencies]
 jupyter = "*"
 nbconvert = "*"
@@ -123,7 +132,11 @@ pydantic = ">=2.0"
 pydantic = "<2.0"
 
 [tool.pixi.environments]
-default = { features = ["mm", "fe", "examples", "dev", "docs", "pydantic-2"] }
+default = { features = ["mm", "fe", "examples", "dev", "docs", "pydantic-2", "openeye"] }
+ambertools = { features = ["mm", "fe", "examples", "dev", "docs", "pydantic-2", "ambertools"] }
+# we get rid of examples here until smirnoff-plugins can be installed without ambertools
+# we also get rid of fe as absolv also installs ambertools
+openeye = { features = ["mm", "dev", "docs", "pydantic-2", "openeye"] }
 cu12 = { features = ["cu12", "mm", "fe", "examples", "dev", "docs", "pydantic-2"] }
 # The fe feature is excluded when pydantic < 2 as femto (used by absolv) needs pydantic >= 2
 pydantic-1-cpu = { features = ["mm", "examples", "dev", "docs", "pydantic-1"] }

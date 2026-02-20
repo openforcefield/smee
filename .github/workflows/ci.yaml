@@ -26,11 +26,8 @@ jobs:
     needs: pre-commit
     strategy:
       matrix:
-        include:
-          - os: ubuntu-latest
-            pixi-platform: linux-64
-          - os: macos-latest
-            pixi-platform: osx-arm64
+        os: [ubuntu-latest, macos-latest]
+        pixi-environment: [default, pydantic-1-cpu, ambertools, openeye]
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
@@ -49,23 +46,21 @@ jobs:
       with:
         pixi-version: v0.62.2
         cache: true
-        environments: default pydantic-1-cpu
+        environments: ${{ matrix.pixi-environment }}
 
-    - name: Run tests with pydantic >=2
+    - name: Run tests
       run: |
-        pixi run test
+        pixi run --environment ${{ matrix.pixi-environment }} test
 
-    - name: Run tests with pydantic <2
+    - name: Test examples (default environment only)
+      if: matrix.pixi-environment == 'default'
       run: |
-        pixi run --environment pydantic-1-cpu test
+        pixi run --environment ${{ matrix.pixi-environment }} test-examples
 
-    - name: Test examples with pydantic >=2
+    - name: Build docs (default environment only)
+      if: matrix.pixi-environment == 'default'
       run: |
-        pixi run test-examples
-
-    - name: Build docs
-      run: |
-        pixi run docs
+        pixi run --environment ${{ matrix.pixi-environment }} docs
 
     - name: CodeCov
       uses: codecov/codecov-action@v4.1.1
