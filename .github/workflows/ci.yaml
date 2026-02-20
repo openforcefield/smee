@@ -49,17 +49,7 @@ jobs:
 
     - name: Run tests with pydantic <2
       run: |
-<<<<<<< HEAD
         pixi run --environment pydantic-1-cpu test
-=======
-        # TODO: Remove this once pydantic 1.0 support is dropped
-        #       We remove absolv as femto needs pydantic >=2
-        mamba remove  --name smee --yes "absolv" "absolv-base" "femto" "pint" --force
-        # remove ambertools to see what else depends on it
-        mamba remove  --name smee --yes "ambertools"
-        mamba install --name smee --yes "pydantic <2"
-        conda list
->>>>>>> 5966e47 (update)
 
     - name: Test examples with pydantic >=2
       run: |
