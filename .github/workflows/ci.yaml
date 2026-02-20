@@ -20,14 +20,14 @@ jobs:
       uses: pre-commit/action@v3.0.1
 
   test-matrix:
+    env:
+      OE_LICENSE: ${{ github.workspace }}/oe_license.txt
+
     needs: pre-commit
     strategy:
       matrix:
-        include:
-          - os: ubuntu-latest
-            pixi-platform: linux-64
-          - os: macos-latest
-            pixi-platform: osx-arm64
+        os: [ubuntu-latest, macos-latest]
+        pixi-environment: [default, pydantic-1-cpu, ambertools, openeye]
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
@@ -36,28 +36,34 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
+    - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
+      env:
+        OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
+      run: echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
+
     - name: Setup pixi
       uses: prefix-dev/setup-pixi@v0.9.3
       with:
         pixi-version: v0.62.2
         cache: true
-        environments: default pydantic-1-cpu
+        # we use locked installs on macos-latest
+        # to avoid cross-platform resolution issues with cuda
+        locked: ${{ matrix.os == 'macos-latest' }}
+        environments: ${{ matrix.pixi-environment }}
 
-    - name: Run tests with pydantic >=2
+    - name: Run tests
       run: |
-        pixi run test
+        pixi run --environment ${{ matrix.pixi-environment }} test
 
-    - name: Run tests with pydantic <2
+    - name: Test examples (default environment only)
+      if: matrix.pixi-environment == 'default'
       run: |
-        pixi run --environment pydantic-1-cpu test
+        pixi run --environment ${{ matrix.pixi-environment }} test-examples
 
-    - name: Test examples with pydantic >=2
+    - name: Build docs (default environment only)
+      if: matrix.pixi-environment == 'default'
       run: |
-        pixi run test-examples
-
-    - name: Build docs
-      run: |
-        pixi run docs
+        pixi run --environment ${{ matrix.pixi-environment }} docs
 
     - name: CodeCov
       uses: codecov/codecov-action@v4.1.1

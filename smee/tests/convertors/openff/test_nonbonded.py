@@ -1,3 +1,7 @@
+import importlib.util
+
+import pytest
+
 import openff.interchange
 import openff.interchange.models
 import openff.toolkit
@@ -11,6 +15,8 @@ from smee.converters.openff.nonbonded import (
     convert_electrostatics,
     convert_vdw,
 )
+
+SMIRNOFF_PLUGINS_AVAILABLE = importlib.util.find_spec("smirnoff_plugins") is not None
 
 
 def test_convert_electrostatics_am1bcc(ethanol, ethanol_interchange):
@@ -57,7 +63,7 @@ def test_convert_electrostatics_am1bcc(ethanol, ethanol_interchange):
     assert parameter_map.exclusion_scale_idxs.shape == (n_expected_exclusions, 1)
 
 
-def test_convert_electrostatics_v_site():
+def test_convert_electrostatics_v_site(toolkit_registry_rdkit_first):
     force_field = openff.toolkit.ForceField()
     force_field.get_parameter_handler("Electrostatics")
     force_field.get_parameter_handler("vdW")
@@ -85,8 +91,10 @@ def test_convert_electrostatics_v_site():
 
     molecule = openff.toolkit.Molecule.from_mapped_smiles("[Cl:2]-[H:1]")
 
-    interchange = openff.interchange.Interchange.from_smirnoff(
-        force_field, molecule.to_topology(), allow_nonintegral_charges=True
+    interchange = force_field.create_interchange(
+        molecule.to_topology(),
+        toolkit_registry=toolkit_registry_rdkit_first,
+        allow_nonintegral_charges=True,
     )
     charge_collection = interchange.collections["Electrostatics"]
 
@@ -160,7 +168,7 @@ def test_convert_electrostatics_v_site():
     assert torch.allclose(parameter_map.exclusion_scale_idxs, expected_scales)
 
 
-def test_convert_electrostatics_tip4p():
+def test_convert_electrostatics_tip4p(toolkit_registry_rdkit_first):
     """Explicitly test the case of TIP4P (FB) water to make sure v-site charges are
     correct.
     """
@@ -168,8 +176,10 @@ def test_convert_electrostatics_tip4p():
     force_field = openff.toolkit.ForceField("tip4p_fb.offxml")
     molecule = openff.toolkit.Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
 
-    interchange = openff.interchange.Interchange.from_smirnoff(
-        force_field, molecule.to_topology(), allow_nonintegral_charges=True
+    interchange = force_field.create_interchange(
+        molecule.to_topology(),
+        toolkit_registry=toolkit_registry_rdkit_first,
+        allow_nonintegral_charges=True,
     )
 
     tensor_top: smee.TensorTopology
@@ -186,7 +196,7 @@ def test_convert_electrostatics_tip4p():
     assert torch.allclose(charges, expected_charges)
 
 
-def test_convert_bci_and_vsite():
+def test_convert_bci_and_vsite(toolkit_registry_rdkit_first):
     ff_off = openff.toolkit.ForceField()
     ff_off.get_parameter_handler("Electrostatics")
     ff_off.get_parameter_handler("vdW")
@@ -213,8 +223,9 @@ def test_convert_bci_and_vsite():
     mol = openff.toolkit.Molecule.from_mapped_smiles("[O:1]([H:2])[H:3]")
     mol.assign_partial_charges(charge_handler.partial_charge_method)
 
-    interchange = openff.interchange.Interchange.from_smirnoff(
-        ff_off, mol.to_topology()
+    interchange = ff_off.create_interchange(
+        mol.to_topology(),
+        toolkit_registry=toolkit_registry_rdkit_first,
     )
 
     expected_charges = [
@@ -293,13 +304,18 @@ def test_convert_vdw(ethanol, ethanol_interchange):
     assert potential.fn == smee.EnergyFn.VDW_LJ
 
 
-def test_convert_dexp(ethanol, test_data_dir):
+@pytest.mark.skipif(
+    not SMIRNOFF_PLUGINS_AVAILABLE,
+    reason="Requires SMIRNOFF plugins to be installed.",
+)
+def test_convert_dexp(ethanol, test_data_dir, toolkit_registry_rdkit_first):
     ff = openff.toolkit.ForceField(
         str(test_data_dir / "de-ff.offxml"), load_plugins=True
     )
 
-    interchange = openff.interchange.Interchange.from_smirnoff(
-        ff, ethanol.to_topology()
+    interchange = ff.create_interchange(
+        ethanol.to_topology(),
+        toolkit_registry=toolkit_registry_rdkit_first,
     )
     vdw_collection = interchange.collections["DoubleExponential"]
 

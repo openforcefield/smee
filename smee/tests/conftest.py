@@ -17,6 +17,21 @@ _KCAL_PER_MOLE = openff.units.unit.kilocalories / openff.units.unit.mole
 _E = openff.units.unit.elementary_charge
 
 
+@pytest.fixture(scope="module")
+def toolkit_registry_rdkit_first():
+    """Returns a toolkit registry with RDKit as the first toolkit."""
+    return openff.toolkit.utils.ToolkitRegistry(
+        toolkit_precedence=[
+            openff.toolkit.utils.nagl_wrapper.NAGLToolkitWrapper,
+            openff.toolkit.utils.rdkit_wrapper.RDKitToolkitWrapper,
+            openff.toolkit.utils.openeye_wrapper.OpenEyeToolkitWrapper,
+            openff.toolkit.utils.ambertools_wrapper.AmberToolsToolkitWrapper,
+            openff.toolkit.utils.builtin_wrapper.BuiltInToolkitWrapper,
+        ],
+        exception_if_unavailable=False,
+    )
+
+
 @pytest.fixture
 def tmp_cwd(tmp_path, monkeypatch) -> pathlib.Path:
     monkeypatch.chdir(tmp_path)
@@ -59,11 +74,12 @@ def ethanol_conformer(ethanol) -> torch.Tensor:
 
 
 @pytest.fixture(scope="module")
-def ethanol_interchange(ethanol, default_force_field) -> openff.interchange.Interchange:
+def ethanol_interchange(
+    ethanol, default_force_field, toolkit_registry_rdkit_first
+) -> openff.interchange.Interchange:
     """Returns a parameterized system of ethanol."""
-
-    return openff.interchange.Interchange.from_smirnoff(
-        default_force_field, ethanol.to_topology()
+    return default_force_field.create_interchange(
+        ethanol.to_topology(), toolkit_registry=toolkit_registry_rdkit_first
     )
 
 
@@ -87,12 +103,12 @@ def formaldehyde_conformer(formaldehyde) -> torch.Tensor:
 
 @pytest.fixture(scope="module")
 def formaldehyde_interchange(
-    formaldehyde, default_force_field
+    formaldehyde, default_force_field, toolkit_registry_rdkit_first
 ) -> openff.interchange.Interchange:
     """Returns a parameterized system of formaldehyde."""
 
-    return openff.interchange.Interchange.from_smirnoff(
-        default_force_field, formaldehyde.to_topology()
+    return default_force_field.create_interchange(
+        formaldehyde.to_topology(), toolkit_registry=toolkit_registry_rdkit_first
     )
 
 

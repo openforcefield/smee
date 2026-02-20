@@ -2,6 +2,7 @@ import importlib
 
 import openff.interchange.models
 import openff.toolkit
+from openff.toolkit.utils.toolkit_registry import toolkit_registry_manager
 import openff.units
 import pytest
 import torch
@@ -190,12 +191,13 @@ def test_convert_interchange_multiple(
     ethanol_interchange,
     formaldehyde_conformer,
     formaldehyde_interchange,
+    toolkit_registry_rdkit_first,
 ):
-    force_field, topologies = convert_interchange(
-        [ethanol_interchange, formaldehyde_interchange]
-    )
-    assert len(topologies) == 2
-
+    with toolkit_registry_manager(toolkit_registry_rdkit_first):
+        force_field, topologies = convert_interchange(
+            [ethanol_interchange, formaldehyde_interchange]
+        )
+        assert len(topologies) == 2
     expected_potentials = {
         "Angles",
         "Bonds",
