@@ -46,7 +46,9 @@ jobs:
       with:
         pixi-version: v0.62.2
         cache: true
-        locked: false
+        # we use locked installs on macos-latest
+        # to avoid cross-platform resolution issues with cuda
+        locked: ${{ matrix.os == 'macos-latest' }}
         environments: ${{ matrix.pixi-environment }}
 
     - name: Run tests
