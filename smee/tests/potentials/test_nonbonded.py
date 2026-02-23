@@ -62,7 +62,9 @@ def _compute_openmm_energy_and_forces(
     omm_forces = state.getForces(asNumpy=True).value_in_unit(
         openmm.unit.kilocalorie_per_mole / openmm.unit.angstrom
     )
-    return torch.tensor(omm_energy, dtype=torch.float64), torch.tensor(omm_forces, dtype=torch.float64)
+    return torch.tensor(
+        omm_energy, dtype=torch.float64), torch.tensor(omm_forces, dtype=torch.float64
+    )
 
 
 def _parameter_key_to_idx(potential: smee.TensorPotential, key: str):
@@ -339,7 +341,9 @@ def test_compute_xxx_energy_periodic(
 
     coords.requires_grad = True
     energy = energy_fn(tensor_sys, vdw_potential, coords.float(), box_vectors.float())
-    forces = -torch.autograd.grad(energy, coords, retain_graph=True)[0].to(torch.float64)
+    forces = -torch.autograd.grad(energy, coords, retain_graph=True)[0].to(
+        torch.float64
+    )
     energy.backward()
 
     expected_energy, expected_forces = _compute_openmm_energy_and_forces(
@@ -379,7 +383,9 @@ def test_compute_xxx_energy_non_periodic(energy_fn, convert_fn, with_exceptions)
     forces = -torch.autograd.grad(energy, coords, retain_graph=True)[0]
     energy.backward()
 
-    expected_energy, expected_forces = _compute_openmm_energy_and_forces(tensor_sys, coords.detach(), None, vdw_potential)
+    expected_energy, expected_forces = _compute_openmm_energy_and_forces(
+        tensor_sys, coords.detach(), None, vdw_potential
+    )
 
     assert torch.isclose(energy, expected_energy, atol=1.0e-5)
     assert torch.allclose(forces, expected_forces, atol=1.0e-5)
@@ -517,7 +523,9 @@ def test_compute_coulomb_energy_periodic(etoh_water_system):
 
     coords.requires_grad = True
     energy = compute_coulomb_energy(tensor_sys, coulomb_potential, coords, box_vectors)
-    forces = -torch.autograd.grad(energy, coords, retain_graph=True)[0].to(torch.float64)
+    forces = -torch.autograd.grad(energy, coords, retain_graph=True)[0].to(
+        torch.float64
+    )
     energy.backward()
 
     expected_energy, expected_forces = _compute_openmm_energy_and_forces(
@@ -555,6 +563,8 @@ def test_compute_pairwise_periodic_indices():
     cutoff = torch.tensor(1.5)
 
     pairwise_distances = _compute_pairwise_periodic(conformer, box_vectors, cutoff)
-    assert torch.all(pairwise_distances.deltas == torch.tensor([[-1.0, 0.0, 0.0], [1.0, 0.0, 0.0]]))
+    assert torch.all(
+        pairwise_distances.deltas == torch.tensor([[-1.0, 0.0, 0.0], [1.0, 0.0, 0.0]])
+    )
     # note, indices end up sorted into the upper triangular matrix
     assert torch.all(pairwise_distances.idxs == torch.tensor([[0, 0], [1, 2]]))
