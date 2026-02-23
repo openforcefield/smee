@@ -568,4 +568,4 @@ def test_compute_pairwise_periodic_indices():
         pairwise_distances.deltas == torch.tensor([[-1.0, 0.0, 0.0], [1.0, 0.0, 0.0]])
     )
     # note, indices end up sorted into the upper triangular matrix
-    assert torch.all(pairwise_distances.idxs == torch.tensor([[0, 0], [1, 2]]))
+    assert torch.all(pairwise_distances.idxs == torch.tensor([[0, 1], [0, 2]]))
