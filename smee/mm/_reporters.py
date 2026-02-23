@@ -5,7 +5,6 @@ import math
 import os
 import typing
 
-import msgpack
 import numpy
 import openmm.app
 import openmm.unit
@@ -72,6 +71,8 @@ class TensorReporter:
         return steps, True, False, False, True
 
     def report(self, simulation: openmm.app.Simulation, state: openmm.State):
+        import msgpack
+
         potential_energy = state.getPotentialEnergy()
         kinetic_energy = state.getKineticEnergy()
 
@@ -107,6 +108,7 @@ def unpack_frames(
     file: typing.BinaryIO,
 ) -> typing.Generator[tuple[torch.Tensor, torch.Tensor, float], None, None]:
     """Unpack frames saved by a ``TensorReporter``."""
+    import msgpack
 
     unpacker = msgpack.Unpacker(file, object_hook=_decoder)
 
