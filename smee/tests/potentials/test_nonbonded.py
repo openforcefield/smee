@@ -549,7 +549,7 @@ def test_compute_coulomb_energy_non_periodic():
     assert torch.allclose(forces, expected_forces, atol=1.0e-4)
 
 
-def test_compute_pairwise_periodic():
+def test_compute_pairwise_periodic_indices():
     conformer = torch.tensor([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [9.0, 0.0, 0.0]])
     box_vectors = torch.tensor([[10.0, 0.0, 0.0], [0.0, 10.0, 0.0], [0.0, 0.0, 10.0]])
     cutoff = torch.tensor(1.5)
