@@ -64,7 +64,7 @@ def _compute_openmm_energy_and_forces(
     )
     return (
         torch.tensor(omm_energy, dtype=torch.float64),
-        torch.tensor(omm_forces, dtype=torch.float64)
+        torch.tensor(omm_forces, dtype=torch.float64),
     )
 
 
