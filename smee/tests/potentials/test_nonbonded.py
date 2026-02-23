@@ -17,6 +17,7 @@ from smee.potentials.nonbonded import (
     _compute_dexp_lrc,
     _compute_lj_lrc,
     _compute_pme_exclusions,
+    _compute_pairwise_periodic,
     compute_coulomb_energy,
     compute_dexp_energy,
     compute_lj_energy,
@@ -546,3 +547,14 @@ def test_compute_coulomb_energy_non_periodic():
 
     assert torch.isclose(energy, expected_energy, atol=1.0e-4)
     assert torch.allclose(forces, expected_forces, atol=1.0e-4)
+
+
+def test_compute_pairwise_periodic():
+    conformer = torch.tensor([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [9.0, 0.0, 0.0]])
+    box_vectors = torch.tensor([[10.0, 0.0, 0.0], [0.0, 10.0, 0.0], [0.0, 0.0, 10.0]])
+    cutoff = torch.tensor(1.5)
+
+    pairwise_distances = _compute_pairwise_periodic(conformer, box_vectors, cutoff)
+    assert torch.all(pairwise_distances.deltas == torch.tensor([[-1.0, 0.0, 0.0], [1.0, 0.0, 0.0]]))
+    # note, indices end up sorted into the upper triangular matrix
+    assert torch.all(pairwise_distances.idxs == torch.tensor([[0, 0], [1, 2]]))
