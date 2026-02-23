@@ -62,8 +62,9 @@ def _compute_openmm_energy_and_forces(
     omm_forces = state.getForces(asNumpy=True).value_in_unit(
         openmm.unit.kilocalorie_per_mole / openmm.unit.angstrom
     )
-    return torch.tensor(
-        omm_energy, dtype=torch.float64), torch.tensor(omm_forces, dtype=torch.float64
+    return (
+        torch.tensor(omm_energy, dtype=torch.float64),
+        torch.tensor(omm_forces, dtype=torch.float64)
     )
 
 
