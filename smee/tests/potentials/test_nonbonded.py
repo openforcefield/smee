@@ -352,6 +352,7 @@ def test_compute_xxx_energy_periodic(
     )
 
     assert torch.isclose(energy, expected_energy, atol=1.0e-3)
+    print((forces - expected_forces).abs().max())
     assert torch.allclose(forces, expected_forces, atol=1.0e-3)
 
 
