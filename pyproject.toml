@@ -137,10 +137,10 @@ ambertools = { features = ["mm", "fe", "examples", "dev", "docs", "pydantic-2", 
 # we get rid of examples here until smirnoff-plugins can be installed without ambertools
 # we also get rid of fe as absolv also installs ambertools
 openeye = { features = ["mm", "dev", "docs", "pydantic-2", "openeye"] }
-cu12 = { features = ["cu12", "mm", "fe", "examples", "dev", "docs", "pydantic-2"] }
+cu12 = { features = ["cu12", "mm", "fe", "examples", "dev", "docs", "pydantic-2", "ambertools"] }
 # The fe feature is excluded when pydantic < 2 as femto (used by absolv) needs pydantic >= 2
-pydantic-1-cpu = { features = ["mm", "examples", "dev", "docs", "pydantic-1"] }
-pydantic-1-cu12 = { features = ["cu12", "mm", "examples", "dev", "docs", "pydantic-1"] }
+pydantic-1-cpu = { features = ["mm", "examples", "dev", "docs", "pydantic-1", "ambertools"] }
+pydantic-1-cu12 = { features = ["cu12", "mm", "examples", "dev", "docs", "pydantic-1", "ambertools"] }
 
 [tool.pixi.tasks]
 lint = "ruff check smee examples"
