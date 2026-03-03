@@ -159,9 +159,9 @@ def test_convert_to_openmm_system_vacuum(with_constraints):
     coords = coords * openmm.unit.angstrom
 
     force_field = openff.toolkit.ForceField(
-        "openff-2.0.0.offxml"
+        "openff-2.3.0.offxml"
         if with_constraints
-        else "openff_unconstrained-2.0.0.offxml"
+        else "openff_unconstrained-2.3.0.offxml"
     )
     interchange = openff.interchange.Interchange.from_smirnoff(
         force_field, mol.to_topology()
@@ -175,9 +175,9 @@ def test_convert_to_openmm_system_vacuum(with_constraints):
 @pytest.mark.parametrize("with_constraints", [True, False])
 def test_convert_to_openmm_system_periodic(with_constraints):
     ff = openff.toolkit.ForceField(
-        "openff-2.0.0.offxml"
+        "openff-2.3.0.offxml"
         if with_constraints
-        else "openff_unconstrained-2.0.0.offxml"
+        else "openff_unconstrained-2.3.0.offxml"
     )
     top = openff.toolkit.Topology()
 
