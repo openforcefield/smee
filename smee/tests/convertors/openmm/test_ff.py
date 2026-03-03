@@ -33,9 +33,9 @@ def compute_v_site_coords(
 @pytest.mark.parametrize("smiles", ["CO", "C=O", "Oc1ccccc1"])
 def test_convert_to_openmm_ffxml(tmp_cwd, with_constraints, smiles):
     off_ff = openff.toolkit.ForceField(
-        "openff-2.3.0.offxml"
+        "openff-2.0.0.offxml"
         if with_constraints
-        else "openff_unconstrained-2.3.0.offxml"
+        else "openff_unconstrained-2.0.0.offxml"
     )
 
     off_mol = openff.toolkit.Molecule.from_smiles(smiles)

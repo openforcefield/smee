@@ -154,7 +154,7 @@ def test_compute_energy(precision, smiles: str):
     conformer += torch.randn((molecule.n_atoms, 1)) * 0.25
 
     interchange = openff.interchange.Interchange.from_smirnoff(
-        openff.toolkit.ForceField("openff_unconstrained-2.3.0.offxml"),
+        openff.toolkit.ForceField("openff_unconstrained-2.0.0.offxml"),
         molecule.to_topology(),
     )
     tensor_ff, [tensor_top] = smee.converters.convert_interchange(interchange)
