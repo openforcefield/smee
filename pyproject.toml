@@ -103,7 +103,6 @@ nglview = "*"
 smirnoff-plugins = "*"
 
 [tool.pixi.feature.dev.dependencies]
-ambertools = "*"
 scipy = "*"
 setuptools_scm = ">=8"
 pre-commit = "*"
