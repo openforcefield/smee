@@ -31,12 +31,12 @@ jobs:
         python-version: ["311", "312"]
         extras: [fe-examples-cpu, fe-examples-cu12, cpu, examples-pydantic-1-cpu, examples-pydantic-1-cu12]
         base:
-          openeye-fe-examples-cpu
-          ambertools-fe-examples-cpu
-          openeye-cpu
-          ambertools-fe-examples-cu12
-          ambertools-examples-pydantic-1-cpu
-          ambertools-examples-pydantic-1-cu12
+          - openeye-fe-examples-cpu
+          - ambertools-fe-examples-cpu
+          - openeye-cpu
+          - ambertools-fe-examples-cu12
+          - ambertools-examples-pydantic-1-cpu
+          - ambertools-examples-pydantic-1-cu12
 
         exclude:
           # CUDA envs don't run on macOS
