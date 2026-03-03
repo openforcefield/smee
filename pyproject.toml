@@ -96,6 +96,9 @@ openeye-toolkits = "*"
 [tool.pixi.feature.ambertools.dependencies]
 ambertools = "*"
 
+[tool.pixi.feature.nagl.dependencies]
+openff-nagl-base = "*"
+
 [tool.pixi.feature.examples.dependencies]
 jupyter = "*"
 nbconvert = "*"
@@ -132,15 +135,15 @@ pydantic = ">=2.0"
 pydantic = "<2.0"
 
 [tool.pixi.environments]
-default = { features = ["mm", "fe", "examples", "dev", "docs", "pydantic-2", "openeye"] }
+default = { features = ["mm", "fe", "examples", "dev", "docs", "pydantic-2", "nagl"] }
 ambertools = { features = ["mm", "fe", "examples", "dev", "docs", "pydantic-2", "ambertools"] }
 # we get rid of examples here until smirnoff-plugins can be installed without ambertools
 # we also get rid of fe as absolv also installs ambertools
 openeye = { features = ["mm", "dev", "docs", "pydantic-2", "openeye"] }
-cu12 = { features = ["cu12", "mm", "fe", "examples", "dev", "docs", "pydantic-2"] }
+cu12 = { features = ["cu12", "mm", "fe", "examples", "dev", "docs", "pydantic-2", "nagl"] }
 # The fe feature is excluded when pydantic < 2 as femto (used by absolv) needs pydantic >= 2
-pydantic-1-cpu = { features = ["mm", "examples", "dev", "docs", "pydantic-1"] }
-pydantic-1-cu12 = { features = ["cu12", "mm", "examples", "dev", "docs", "pydantic-1"] }
+pydantic-1-cpu = { features = ["mm", "examples", "dev", "docs", "pydantic-1", "nagl"] }
+pydantic-1-cu12 = { features = ["cu12", "mm", "examples", "dev", "docs", "pydantic-1", "nagl"] }
 
 [tool.pixi.tasks]
 lint = "ruff check smee examples"
