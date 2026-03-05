@@ -1,11 +1,10 @@
 import importlib.util
 
-import pytest
-
 import openff.interchange
 import openff.interchange.models
 import openff.toolkit
 import openff.units
+import pytest
 import torch
 
 import smee

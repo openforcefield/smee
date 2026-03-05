@@ -2,10 +2,10 @@ import importlib
 
 import openff.interchange.models
 import openff.toolkit
-from openff.toolkit.utils.toolkit_registry import toolkit_registry_manager
 import openff.units
 import pytest
 import torch
+from openff.toolkit.utils.toolkit_registry import toolkit_registry_manager
 
 import smee
 import smee.tests.utils
