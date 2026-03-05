@@ -232,3 +232,32 @@ def test_compute_energy_v_sites():
     energy_smee = compute_energy(tensor_top, tensor_ff, conformer)
 
     assert torch.isclose(energy_smee, energy_openmm.to(energy_smee.dtype))
+
+
+@pytest.mark.parametrize("periodic", [True, False])
+def test_energy_backward_pass(periodic):
+    tensor_sys, tensor_ff = smee.tests.utils.system_from_smiles(["CCC", "O"], [2, 3])
+    tensor_sys.is_periodic = periodic
+
+    coords, _ = smee.mm.generate_system_coords(tensor_sys, None)
+    coords = torch.tensor(coords.value_in_unit(openmm.unit.angstrom))
+    box_vectors = torch.eye(3, dtype=coords.dtype) * 30.0 if periodic else None
+    coords.requires_grad = True
+
+    for potential in tensor_ff.potentials:
+        potential.parameters.requires_grad = True
+        if potential.attributes is not None:
+            potential.attributes.requires_grad = True
+
+    energy = smee.compute_energy(tensor_sys, tensor_ff, coords, box_vectors)
+    energy.backward()
+
+    assert coords.grad is not None
+    for potential in tensor_ff.potentials:
+        assert potential.parameters.grad is not None
+        assert potential.parameters.grad.shape == potential.parameters.shape
+        assert not torch.isnan(potential.parameters.grad).any()
+        if potential.attributes is not None:
+            assert potential.attributes.grad is not None
+            assert potential.attributes.grad.shape == potential.attributes.shape
+            assert not torch.isnan(potential.attributes.grad).any()
