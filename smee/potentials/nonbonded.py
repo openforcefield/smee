@@ -352,10 +352,9 @@ def _integrate_lj_switch(
     )
     coeff_11 = smee.utils.tensor_like([84, -3780, 7560, 2520, -3780, 756], rs) * coeff_0
 
-    r_pow = torch.pow(
-        r, smee.utils.tensor_like([-9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2], rs)
-    )
-    r_pow[-3] = torch.log(r)
+    powers = smee.utils.tensor_like([-9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2], rs)
+    r_pow = torch.pow(r, powers)
+    r_pow = torch.where(powers == 0, torch.log(r), r_pow)
 
     integral = (
         -(b**3)
