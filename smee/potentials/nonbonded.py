@@ -148,6 +148,9 @@ def _compute_pairwise_periodic(
     # ensure i < j
     pair_idxs, _ = pair_idxs.sort(dim=0)
 
+    # we recompute the distances because the getNeighborPairs of NNPOps does not
+    # support double backward gradients, and we need the distances to be differentiable
+    # for computing, e.g., derivatives of the forces w.r.t. the FF parameters.
     deltas = conformer[pair_idxs[0]] - conformer[pair_idxs[1]]
     shifts = torch.round(deltas @ torch.linalg.inv(box_vectors))
     deltas = deltas - shifts @ box_vectors
