@@ -569,3 +569,38 @@ def test_compute_pairwise_periodic_indices():
     )
     # note, indices end up sorted into the upper triangular matrix
     assert torch.all(pairwise_distances.idxs == torch.tensor([[0, 1], [0, 2]]))
+
+
+def test_compute_pairwise_periodic_double_backward():
+    epsilon = torch.tensor([0.3], requires_grad=True)
+    sigma = torch.tensor([3.0], requires_grad=True)
+    cutoff = torch.tensor(9.0)
+
+    # Two particles
+    coords = torch.tensor([[0.0, 0.0, 0.0], [3.1, 0.0, 0.0]], requires_grad=True)
+    box_vectors = torch.eye(3) * 30.0
+    pairwise = _compute_pairwise_periodic(coords, box_vectors, cutoff)
+    assert pairwise.distances.grad_fn is not None
+
+    # Get LJ energy for the pair
+    sig_r = sigma / pairwise.distances
+    energy = 4.0 * epsilon * (sig_r**12 - sig_r**6)
+    assert energy.grad_fn is not None
+
+    # First backward, compute forces (F = -dE/dcoords)
+    forces = -torch.autograd.grad(energy, coords, create_graph=True, retain_graph=True)[
+        0
+    ]
+    force_loss = (forces**2).sum()
+
+    # Second backward, get parameter gradients
+    force_loss.backward()
+    epsilon_grad = epsilon.grad
+    sigma_grad = sigma.grad
+
+    assert torch.isclose(
+        epsilon_grad, torch.tensor([20.0522], dtype=epsilon_grad.dtype), atol=1.0e-5
+    )
+    assert torch.isclose(
+        sigma_grad, torch.tensor([42.7793], dtype=sigma_grad.dtype), atol=1.0e-5
+    )
