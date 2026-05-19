@@ -137,21 +137,25 @@ def _compute_pairwise_periodic(
 
     (
         pair_idxs,
-        deltas,
+        _,
         distances,
         _,
     ) = NNPOps.neighbors.getNeighborPairs(conformer, cutoff.item(), -1, box_vectors)
 
     are_interacting = ~torch.isnan(distances)
-
-    distances = distances[are_interacting]
-    deltas = deltas[are_interacting, :]
     pair_idxs = pair_idxs[:, are_interacting]
-    # we sort the indices to get values correponding to upper triangles
-    # but we need to track which have been reversed so we can reverse the deltas
-    pair_idxs, indices = pair_idxs.sort(dim=0)
-    reversed = -(indices[0] == 1).to(deltas.dtype)
-    deltas = deltas * reversed[:, None]
+
+    # ensure i < j
+    pair_idxs, _ = pair_idxs.sort(dim=0)
+
+    # we recompute the distances because the getNeighborPairs of NNPOps does not
+    # support double backward gradients, and we need the distances to be differentiable
+    # for computing, e.g., derivatives of the forces w.r.t. the FF parameters.
+    deltas = conformer[pair_idxs[0]] - conformer[pair_idxs[1]]
+    shifts = torch.round(deltas @ torch.linalg.inv(box_vectors))
+    deltas = deltas - shifts @ box_vectors
+
+    distances = torch.linalg.norm(deltas, dim=-1)
 
     return PairwiseDistances(pair_idxs.T.contiguous(), deltas, distances, cutoff)
 
@@ -352,10 +356,9 @@ def _integrate_lj_switch(
     )
     coeff_11 = smee.utils.tensor_like([84, -3780, 7560, 2520, -3780, 756], rs) * coeff_0
 
-    r_pow = torch.pow(
-        r, smee.utils.tensor_like([-9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2], rs)
-    )
-    r_pow[-3] = torch.log(r)
+    powers = smee.utils.tensor_like([-9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2], rs)
+    r_pow = torch.pow(r, powers)
+    r_pow = torch.where(powers == 0, torch.log(r), r_pow)
 
     integral = (
         -(b**3)

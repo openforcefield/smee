@@ -2,13 +2,13 @@ import pytest
 
 pytest.importorskip("openmm")
 
-import importlib.util  # noqa: E402
+import importlib.util
 
-import openff.interchange  # noqa: E402
-import openff.interchange.models  # noqa: E402
-import openff.toolkit  # noqa: E402
-import openff.units  # noqa: E402
-import torch  # noqa: E402
+import openff.interchange
+import openff.interchange.models
+import openff.toolkit
+import openff.units
+import torch
 
 import smee  # noqa: E402
 import smee.converters  # noqa: E402
