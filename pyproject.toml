@@ -53,12 +53,10 @@ platforms = ["linux-64", "osx-arm64"]
 [tool.pixi.pypi-dependencies]
 smee = { path = ".", editable = true }
 
-# Mirrors the post-change conda-forge `smee-base` recipe run-deps (sans `nnpops`).
-# Everything else — including the rest of the full `smee` recipe surface
+# Mirrors the conda-forge `smee-base` recipe run-deps.
+# Everything else — including the rest of the full `smee` recipe
 # (openmm, packmol, numpy, msgpack-python, pydantic, pydantic-units, rdkit,
 # and nnpops) — lives in the `mm` feature.
-# `networkx` is needed at `import smee` time but comes in transitively via
-# pytorch (which requires networkx>=2.5.1), matching the recipe.
 [tool.pixi.dependencies]
 python = ">=3.11"
 pytorch = "*"
