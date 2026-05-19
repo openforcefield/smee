@@ -160,7 +160,7 @@ ambertools-examples-pydantic-1-cpu-py311 = { features = ["py311", "mm", "example
 ambertools-examples-pydantic-1-cpu-py312 = { features = ["py312", "mm", "examples", "dev", "docs", "pydantic-1", "ambertools"], solve-group = "cpu-py312-pydantic1" }
 ambertools-examples-pydantic-1-cu12-py311 = { features = ["py311", "cu12", "mm", "examples", "dev", "docs", "pydantic-1", "ambertools"], solve-group = "cu12-py311-pydantic1" }
 ambertools-examples-pydantic-1-cu12-py312 = { features = ["py312", "cu12", "mm", "examples", "dev", "docs", "pydantic-1", "ambertools"], solve-group = "cu12-py312-pydantic1" }
-# mirrors the post-change conda-forge `smee-base` recipe (no mm-stack deps, no nnpops)
+# mirrors the conda-forge `smee-base` recipe (no mm-stack deps)
 base-py311 = { features = ["py311", "dev"], solve-group = "cpu-py311-base" }
 base-py312 = { features = ["py312", "dev"], solve-group = "cpu-py312-base" }
 
