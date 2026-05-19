@@ -2,19 +2,19 @@ import pytest
 
 pytest.importorskip("openmm")
 
-import numpy  # noqa: E402
-import openff.interchange  # noqa: E402
-import openff.interchange.models  # noqa: E402
-import openff.toolkit  # noqa: E402
-import openff.units  # noqa: E402
-import openmm  # noqa: E402
-import openmm.unit  # noqa: E402
-import torch  # noqa: E402
+import numpy
+import openff.interchange
+import openff.interchange.models
+import openff.toolkit
+import openff.units
+import openmm
+import openmm.unit
+import torch
 
-import smee.converters  # noqa: E402
-import smee.tests.utils  # noqa: E402
-import smee.utils  # noqa: E402
-from smee.potentials import (  # noqa: E402
+import smee.converters
+import smee.tests.utils
+import smee.utils
+from smee.potentials import (
     broadcast_exceptions,
     broadcast_parameters,
     compute_energy,

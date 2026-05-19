@@ -3,16 +3,16 @@ import pytest
 pytest.importorskip("openmm")
 pytest.importorskip("msgpack")
 
-import msgpack  # noqa: E402
-import numpy  # noqa: E402
-import openff.interchange.models  # noqa: E402
-import openff.units  # noqa: E402
-import openmm.unit  # noqa: E402
-import torch  # noqa: E402
+import msgpack
+import numpy
+import openff.interchange.models
+import openff.units
+import openmm.unit
+import torch
 
-import smee  # noqa: E402
-import smee.tests.utils  # noqa: E402
-from smee.mm._ops import (  # noqa: E402
+import smee
+import smee.tests.utils
+from smee.mm._ops import (
     _compute_frame_observables,
     _compute_mass,
     _compute_observables,
@@ -21,7 +21,7 @@ from smee.mm._ops import (  # noqa: E402
     compute_ensemble_averages,
     reweight_ensemble_averages,
 )
-from smee.mm._reporters import _encoder  # noqa: E402
+from smee.mm._reporters import _encoder
 
 
 def _mock_potential(type_, parameters, attributes) -> smee.TensorPotential:

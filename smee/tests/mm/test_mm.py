@@ -3,20 +3,20 @@ import pytest
 pytest.importorskip("openmm")
 pytest.importorskip("rdkit")
 
-import numpy  # noqa: E402
-import openff.interchange  # noqa: E402
-import openff.interchange.models  # noqa: E402
-import openff.toolkit  # noqa: E402
-import openmm.app  # noqa: E402
-import openmm.unit  # noqa: E402
-import torch  # noqa: E402
-from rdkit import Chem  # noqa: E402
+import numpy
+import openff.interchange
+import openff.interchange.models
+import openff.toolkit
+import openmm.app
+import openmm.unit
+import torch
+from rdkit import Chem
 
-import smee  # noqa: E402
-import smee.converters  # noqa: E402
-import smee.mm  # noqa: E402
-import smee.mm._utils  # noqa: E402
-import smee.tests.utils  # noqa: E402
+import smee
+import smee.converters
+import smee.mm
+import smee.mm._utils
+import smee.tests.utils
 from smee.mm._mm import (
     _apply_hmr,
     _approximate_box_size,

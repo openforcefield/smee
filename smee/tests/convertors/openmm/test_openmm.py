@@ -2,20 +2,20 @@ import pytest
 
 pytest.importorskip("openmm")
 
-import importlib.util  # noqa: E402
+import importlib.util
 
-import numpy.random  # noqa: E402
-import openff.interchange  # noqa: E402
-import openff.toolkit  # noqa: E402
-import openff.units  # noqa: E402
-import openmm  # noqa: E402
-import torch  # noqa: E402
+import numpy.random
+import openff.interchange
+import openff.toolkit
+import openff.units
+import openmm
+import torch
 
-import smee  # noqa: E402
-import smee.mm  # noqa: E402
-import smee.potentials  # noqa: E402
-import smee.tests.utils  # noqa: E402
-from smee.converters.openmm import (  # noqa: E402
+import smee
+import smee.mm
+import smee.potentials
+import smee.tests.utils
+from smee.converters.openmm import (
     convert_to_openmm_force,
     convert_to_openmm_system,
     convert_to_openmm_topology,

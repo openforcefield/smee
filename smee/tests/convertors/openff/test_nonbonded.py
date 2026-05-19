@@ -10,9 +10,9 @@ import openff.toolkit
 import openff.units
 import torch
 
-import smee  # noqa: E402
-import smee.converters  # noqa: E402
-from smee.converters.openff.nonbonded import (  # noqa: E402
+import smee
+import smee.converters
+from smee.converters.openff.nonbonded import (
     convert_dexp,
     convert_electrostatics,
     convert_vdw,
