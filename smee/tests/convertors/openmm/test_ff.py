@@ -1,13 +1,17 @@
-import numpy
-import openff.interchange
-import openff.toolkit
-import openmm.app
-import openmm.unit
 import pytest
 
-import smee
-import smee.converters
-import smee.converters.openmm
+pytest.importorskip("openmm")
+
+import numpy  # noqa: E402
+import openff.interchange  # noqa: E402
+import openff.toolkit  # noqa: E402
+import openmm  # noqa: E402
+import openmm.app  # noqa: E402
+import openmm.unit  # noqa: E402
+
+import smee  # noqa: E402
+import smee.converters  # noqa: E402
+import smee.converters.openmm  # noqa: E402
 
 
 def compute_energy(system: openmm.System, coords: numpy.ndarray) -> float:

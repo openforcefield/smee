@@ -4,11 +4,10 @@ import openff.interchange
 import openff.interchange.models
 import openff.toolkit
 import openff.units
+import pytest
 import torch
-from rdkit import Chem
 
 import smee
-import smee.converters
 import smee.potentials.nonbonded
 import smee.utils
 
@@ -60,6 +59,8 @@ def topology_from_smiles(smiles: str) -> smee.TensorTopology:
     Returns:
         The topology.
     """
+    Chem = pytest.importorskip("rdkit").Chem
+
     mol = Chem.AddHs(Chem.MolFromSmiles(smiles))
 
     return smee.TensorTopology(
@@ -106,6 +107,9 @@ def system_from_smiles(
         )
         for pattern in smiles
     ]
+
+    pytest.importorskip("openmm")
+    import smee.converters
 
     tensor_ff, tensor_tops = smee.converters.convert_interchange(interchanges)
 

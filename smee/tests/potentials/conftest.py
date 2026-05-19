@@ -1,10 +1,8 @@
 import copy
 
-import openmm.unit
 import pytest
 import torch
 
-import smee.mm
 import smee.tests.utils
 
 
@@ -12,15 +10,18 @@ import smee.tests.utils
 def _etoh_water_system() -> tuple[
     smee.TensorSystem, smee.TensorForceField, torch.Tensor, torch.Tensor
 ]:
+    openmm_unit = pytest.importorskip("openmm.unit")
+    smee_mm = pytest.importorskip("smee.mm")
+
     system, force_field = smee.tests.utils.system_from_smiles(["CCO", "O"], [67, 123])
-    coords, box_vectors = smee.mm.generate_system_coords(system, None)
+    coords, box_vectors = smee_mm.generate_system_coords(system, None)
 
     return (
         system,
         force_field,
-        torch.tensor(coords.value_in_unit(openmm.unit.angstrom), dtype=torch.float32),
+        torch.tensor(coords.value_in_unit(openmm_unit.angstrom), dtype=torch.float32),
         torch.tensor(
-            box_vectors.value_in_unit(openmm.unit.angstrom), dtype=torch.float32
+            box_vectors.value_in_unit(openmm_unit.angstrom), dtype=torch.float32
         ),
     )
 

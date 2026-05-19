@@ -1,8 +1,11 @@
-import openff.interchange
-import openff.toolkit
 import pytest
 
-from smee.converters.openff.valence import (
+pytest.importorskip("openmm")
+
+import openff.interchange  # noqa: E402
+import openff.toolkit  # noqa: E402
+
+from smee.converters.openff.valence import (  # noqa: E402
     convert_angles,
     convert_bonds,
     convert_impropers,

@@ -1,17 +1,20 @@
-import copy
-import math
-
-import numpy
-import openmm.unit
 import pytest
-import torch
 
-import smee
-import smee.converters
-import smee.converters.openmm
-import smee.mm
-import smee.tests.utils
-import smee.utils
+pytest.importorskip("openmm")
+
+import copy  # noqa: E402
+import math  # noqa: E402
+
+import numpy  # noqa: E402
+import openmm.unit  # noqa: E402
+import torch  # noqa: E402
+
+import smee  # noqa: E402
+import smee.converters  # noqa: E402
+import smee.converters.openmm  # noqa: E402
+import smee.mm  # noqa: E402
+import smee.tests.utils  # noqa: E402
+import smee.utils  # noqa: E402
 from smee.potentials.nonbonded import (
     _COULOMB_PRE_FACTOR,
     _compute_dexp_lrc,

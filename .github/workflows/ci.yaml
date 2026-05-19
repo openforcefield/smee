@@ -27,7 +27,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        pixi-environment: [default, pydantic-1-cpu, ambertools, openeye]
+        pixi-environment: [default, pydantic-1-cpu, ambertools, openeye, base]
       fail-fast: false
 
     runs-on: ${{ matrix.os }}

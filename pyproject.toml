@@ -53,6 +53,12 @@ platforms = ["linux-64", "osx-arm64"]
 [tool.pixi.pypi-dependencies]
 smee = { path = ".", editable = true }
 
+# Mirrors the post-change conda-forge `smee-base` recipe run-deps (sans `nnpops`).
+# Everything else — including the rest of the full `smee` recipe surface
+# (openmm, packmol, numpy, msgpack-python, pydantic, pydantic-units, rdkit,
+# and nnpops) — lives in the `mm` feature.
+# `networkx` is needed at `import smee` time but comes in transitively via
+# pytorch (which requires networkx>=2.5.1), matching the recipe.
 [tool.pixi.dependencies]
 python = ">=3.10"
 pytorch = "*"
@@ -60,10 +66,6 @@ pip = "*"
 openff-units = "*"
 openff-toolkit-base = ">=0.9.2"
 openff-interchange-base = ">=0.3.17"
-openff-models = "*"
-nnpops = "*"
-pydantic-units = "*"
-networkx = "*"
 
 [tool.pixi.feature.cu12]
 platforms = ["linux-64"]
@@ -75,6 +77,8 @@ cuda = "12"
 cuda-version = "12.*"
 pytorch-gpu = "*"
 
+# Combining these deps with the base deps gives the same deps
+# as the full `smee` recipe on conda-forge.
 [tool.pixi.feature.mm.dependencies]
 openmm = "*"
 python-symengine = "*"
@@ -82,6 +86,9 @@ rdkit = "*"
 packmol = "*"
 numpy = "*"
 msgpack-python = "*"
+nnpops = "*"
+pydantic = "*"
+pydantic-units = "*"
 
 [tool.pixi.feature.fe.dependencies]
 mdtraj = "*"
@@ -141,6 +148,8 @@ cu12 = { features = ["cu12", "mm", "fe", "examples", "dev", "docs", "pydantic-2"
 # The fe feature is excluded when pydantic < 2 as femto (used by absolv) needs pydantic >= 2
 pydantic-1-cpu = { features = ["mm", "examples", "dev", "docs", "pydantic-1", "ambertools"] }
 pydantic-1-cu12 = { features = ["cu12", "mm", "examples", "dev", "docs", "pydantic-1", "ambertools"] }
+# mirrors the post-change conda-forge `smee-base` recipe (no mm-stack deps, no nnpops)
+base = { features = ["dev"] }
 
 [tool.pixi.tasks]
 lint = "ruff check smee examples"

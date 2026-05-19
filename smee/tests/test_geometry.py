@@ -1,14 +1,17 @@
-import numpy
-import openff.interchange.models
-import openff.toolkit
-import openmm
 import pytest
-import torch
-import torch.autograd.functional
-from openff.units import unit
 
-import smee
-import smee.converters
+pytest.importorskip("openmm")
+
+import numpy  # noqa: E402
+import openff.interchange.models  # noqa: E402
+import openff.toolkit  # noqa: E402
+import openmm  # noqa: E402
+import torch  # noqa: E402
+import torch.autograd.functional  # noqa: E402
+from openff.units import unit  # noqa: E402
+
+import smee  # noqa: E402
+import smee.converters  # noqa: E402
 from smee.geometry import (
     V_SITE_TYPE_TO_FRAME,
     _build_v_site_coord_frames,

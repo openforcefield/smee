@@ -1,10 +1,13 @@
-import openff.interchange
-import openff.toolkit
-import openff.units
 import pytest
 
-import smee
-import smee.converters
+pytest.importorskip("openmm")
+
+import openff.interchange  # noqa: E402
+import openff.toolkit  # noqa: E402
+import openff.units  # noqa: E402
+
+import smee  # noqa: E402
+import smee.converters  # noqa: E402
 
 
 @pytest.fixture()

@@ -1,8 +1,11 @@
-import numpy
-import openmm.unit
 import pytest
 
-from smee.mm._reporters import TensorReporter, tensor_reporter, unpack_frames
+pytest.importorskip("openmm")
+
+import numpy  # noqa: E402
+import openmm.unit  # noqa: E402
+
+from smee.mm._reporters import TensorReporter, tensor_reporter, unpack_frames  # noqa: E402
 
 
 class TestTensorReporter:

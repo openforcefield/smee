@@ -1,15 +1,18 @@
-import pathlib
-
-import openff.interchange
-import openff.toolkit
-import openff.units
-import openmm.unit
 import pytest
-import torch
 
-import smee.converters
-import smee.mm
-import smee.mm._fe
+pytest.importorskip("openmm")
+
+import pathlib  # noqa: E402
+
+import openff.interchange  # noqa: E402
+import openff.toolkit  # noqa: E402
+import openff.units  # noqa: E402
+import openmm.unit  # noqa: E402
+import torch  # noqa: E402
+
+import smee.converters  # noqa: E402
+import smee.mm  # noqa: E402
+import smee.mm._fe  # noqa: E402
 
 
 def load_systems(solute: str, solvent: str):

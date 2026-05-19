@@ -1,16 +1,18 @@
-import importlib.util
-
 import pytest
 
-import openff.interchange
-import openff.interchange.models
-import openff.toolkit
-import openff.units
-import torch
+pytest.importorskip("openmm")
 
-import smee
-import smee.converters
-from smee.converters.openff.nonbonded import (
+import importlib.util  # noqa: E402
+
+import openff.interchange  # noqa: E402
+import openff.interchange.models  # noqa: E402
+import openff.toolkit  # noqa: E402
+import openff.units  # noqa: E402
+import torch  # noqa: E402
+
+import smee  # noqa: E402
+import smee.converters  # noqa: E402
+from smee.converters.openff.nonbonded import (  # noqa: E402
     convert_dexp,
     convert_electrostatics,
     convert_vdw,
