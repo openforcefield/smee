@@ -1,10 +1,14 @@
+import pytest
+
+pytest.importorskip("openmm")
+pytest.importorskip("rdkit")
+
 import numpy
 import openff.interchange
 import openff.interchange.models
 import openff.toolkit
 import openmm.app
 import openmm.unit
-import pytest
 import torch
 from rdkit import Chem
 

@@ -1,6 +1,9 @@
+import pytest
+
+pytest.importorskip("openmm")
+
 import numpy
 import openmm.unit
-import pytest
 
 from smee.mm._reporters import TensorReporter, tensor_reporter, unpack_frames
 

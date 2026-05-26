@@ -1,8 +1,11 @@
+import pytest
+
+pytest.importorskip("openmm")
+
 import numpy
 import openff.interchange.models
 import openff.toolkit
 import openmm
-import pytest
 import torch
 import torch.autograd.functional
 from openff.units import unit

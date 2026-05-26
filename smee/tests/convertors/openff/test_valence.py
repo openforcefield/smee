@@ -1,6 +1,9 @@
+import pytest
+
+pytest.importorskip("openmm")
+
 import openff.interchange
 import openff.toolkit
-import pytest
 
 from smee.converters.openff.valence import (
     convert_angles,

@@ -1,9 +1,13 @@
+import pytest
+
+pytest.importorskip("openmm")
+
 import numpy
 import openff.interchange
 import openff.toolkit
+import openmm
 import openmm.app
 import openmm.unit
-import pytest
 
 import smee
 import smee.converters

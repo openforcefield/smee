@@ -1,9 +1,13 @@
+import pytest
+
+pytest.importorskip("openmm")
+pytest.importorskip("msgpack")
+
 import msgpack
 import numpy
 import openff.interchange.models
 import openff.units
 import openmm.unit
-import pytest
 import torch
 
 import smee

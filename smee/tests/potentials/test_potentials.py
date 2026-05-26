@@ -1,3 +1,7 @@
+import pytest
+
+pytest.importorskip("openmm")
+
 import numpy
 import openff.interchange
 import openff.interchange.models
@@ -5,13 +9,16 @@ import openff.toolkit
 import openff.units
 import openmm
 import openmm.unit
-import pytest
 import torch
 
 import smee.converters
 import smee.tests.utils
 import smee.utils
-from smee.potentials import broadcast_exceptions, broadcast_parameters, compute_energy
+from smee.potentials import (
+    broadcast_exceptions,
+    broadcast_parameters,
+    compute_energy,
+)
 
 
 def _place_v_sites(

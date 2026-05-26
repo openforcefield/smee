@@ -1,14 +1,16 @@
+import pytest
+
+pytest.importorskip("openmm")
+
 import importlib
 
 import openff.interchange.models
 import openff.toolkit
-import openff.units
-import pytest
-import torch
 from openff.toolkit.utils.toolkit_registry import toolkit_registry_manager
+import openff.units
+import torch
 
 import smee
-import smee.tests.utils
 from smee.converters.openff._openff import (
     _CONVERTERS,
     _convert_topology,

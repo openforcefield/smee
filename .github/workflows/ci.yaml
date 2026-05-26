@@ -35,6 +35,7 @@ jobs:
           - ambertools-fe-examples-cpu
           - openeye-cpu
           - ambertools-examples-pydantic-1-cpu
+          - base
 
     steps:
       - uses: actions/checkout@v4

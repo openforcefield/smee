@@ -1,10 +1,13 @@
+import pytest
+
+pytest.importorskip("openmm")
+
 import pathlib
 
 import openff.interchange
 import openff.toolkit
 import openff.units
 import openmm.unit
-import pytest
 import torch
 
 import smee.converters

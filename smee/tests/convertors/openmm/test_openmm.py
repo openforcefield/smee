@@ -1,3 +1,7 @@
+import pytest
+
+pytest.importorskip("openmm")
+
 import importlib.util
 
 import numpy.random
@@ -5,7 +9,6 @@ import openff.interchange
 import openff.toolkit
 import openff.units
 import openmm
-import pytest
 import torch
 
 import smee

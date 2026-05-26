@@ -1,9 +1,12 @@
+import pytest
+
+pytest.importorskip("openmm")
+
 import copy
 import math
 
 import numpy
 import openmm.unit
-import pytest
 import torch
 
 import smee
