@@ -28,7 +28,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ["311", "312"]
+        python-version: ["312"]
         # Exclude the CUDA envs as we can't test them on GitHub Actions
         base:
           - openeye-fe-examples-cpu
@@ -48,7 +48,7 @@ jobs:
       - name: Setup pixi
         uses: prefix-dev/setup-pixi@v0.9.3
         with:
-          pixi-version: v0.63.2
+          pixi-version: v0.70.0
           cache: true
           environments: ${{ env.PIXI_ENV }}
 
@@ -60,7 +60,7 @@ jobs:
         run: pixi run -e "${{ env.PIXI_ENV }}" test-examples
 
       - name: CodeCov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           file: ./coverage.xml
           flags: unittests
