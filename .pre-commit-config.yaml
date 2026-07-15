@@ -1,6 +1,8 @@
+ci:
+    autoupdate_schedule: quarterly
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.2.0
+    rev: v6.0.0
     hooks:
     -   id: trailing-whitespace
     -   id: end-of-file-fixer
@@ -8,7 +10,7 @@ repos:
 
 -   repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: v0.15.1
+    rev: v0.15.21
     hooks:
       # Run the linter.
       - id: ruff-check
