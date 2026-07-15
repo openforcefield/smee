@@ -1,0 +1,114 @@
+[workspace]
+name = "smee"
+channels = ["conda-forge"]
+platforms = [
+  "osx-arm64",
+  "linux-64",
+  { name = "cuda12", platform = "linux-64", cuda = "12.0" },
+]
+
+[pypi-dependencies]
+smee = { path = ".", editable = true }
+
+# Mirrors the conda-forge `smee-base` recipe run-deps.
+# Everything else — including the rest of the full `smee` recipe
+# (openmm, packmol, numpy, msgpack-python, pydantic, pydantic-units, rdkit,
+# and nnpops) — lives in the `mm` feature.
+[dependencies]
+python = ">=3.12"
+pytorch = "*"
+pip = "*"
+openff-units = "*"
+openff-toolkit-base = ">=0.9.2"
+openff-interchange-base = ">=0.3.17"
+
+[feature.cu12]
+platforms = [ "cuda12", ]
+
+[feature.cu12.dependencies]
+cuda-version = "12.*"
+pytorch-gpu = "*"
+
+# Combining these deps with the base deps gives the same deps
+# as the full `smee` recipe on conda-forge.
+[feature.mm.dependencies]
+openmm = "*"
+python-symengine = "*"
+rdkit = "*"
+packmol = "*"
+numpy = "*"
+msgpack-python = "*"
+nnpops = "*"
+pydantic = "*"
+pydantic-units = "*"
+
+[feature.fe.dependencies]
+mdtraj = "*"
+absolv = ">=1.0.1"
+
+[feature.openeye]
+channels = ["openeye"]
+
+[feature.openeye.dependencies]
+openeye-toolkits = "*"
+
+[feature.ambertools.dependencies]
+ambertools = "*"
+
+[feature.examples.dependencies]
+jupyter = "*"
+nbconvert = "*"
+nglview = "*"
+smirnoff-plugins = "*"
+
+[feature.dev.dependencies]
+scipy = "*"
+setuptools_scm = ">=8"
+pre-commit = "*"
+ruff = "*"
+nbqa = "*"
+pytest = "*"
+pytest-cov = "*"
+pytest-mock = "*"
+codecov = "*"
+
+[feature.docs.dependencies]
+mkdocs = "*"
+mkdocs-material = "*"
+mkdocs-gen-files = "*"
+mkdocs-literate-nav = "*"
+mkdocs-jupyter = "*"
+mkdocstrings = "*"
+mkdocstrings-python = ">=1.10.8"
+griffe-pydantic = "*"
+black = "*"
+mike = "*"
+
+[feature.py312.dependencies]
+python = "3.12.*"
+
+[feature.pydantic-2.dependencies]
+pydantic = ">=2.0"
+
+[environments]
+# Default env is the same as openeye-fe-examples-cpu-py312
+default = { features = ["py312", "mm", "fe", "examples", "dev", "docs", "pydantic-2", "openeye"], solve-group = "cpu-py312-pydantic2" }
+openeye-fe-examples-cpu-py312 = { features = ["py312", "mm", "fe", "examples", "dev", "docs", "pydantic-2", "openeye"], solve-group = "cpu-py312-pydantic2" }
+ambertools-fe-examples-cpu-py312 = { features = ["py312", "mm", "fe", "examples", "dev", "docs", "pydantic-2", "ambertools"], solve-group = "cpu-py312-pydantic2" }
+# we get rid of examples here until smirnoff-plugins can be installed without ambertools
+# we also get rid of fe as absolv also installs ambertools
+openeye-cpu-py312 = { features = ["py312", "mm", "dev", "docs", "pydantic-2", "openeye"], solve-group = "cpu-py312-pydantic2" }
+ambertools-fe-examples-cu12-py312 = { features = ["py312", "cu12", "mm", "fe", "examples", "dev", "docs", "pydantic-2", "ambertools"], solve-group = "cu12-py312-pydantic2" }
+# The fe feature is excluded when pydantic < 2 as femto (used by absolv) needs pydantic >= 2
+ambertools-examples-pydantic-2-cpu-py312 = { features = ["py312", "mm", "examples", "dev", "docs", "pydantic-2", "ambertools"], solve-group = "cpu-py312-pydantic1" }
+ambertools-examples-pydantic-2-cu12-py312 = { features = ["py312", "cu12", "mm", "examples", "dev", "docs", "pydantic-2", "ambertools"], solve-group = "cu12-py312-pydantic1" }
+# mirrors the conda-forge `smee-base` recipe (no mm-stack deps)
+base-py312 = { features = ["py312", "dev"], solve-group = "cpu-py312-base" }
+
+[tasks]
+lint = "ruff check smee examples"
+format = { cmd = "ruff format smee examples && ruff check --fix --select I smee examples" }
+test = "pytest -v --cov=smee --cov-append --cov-report=xml --color=yes smee/tests/"
+test-examples = "jupyter nbconvert --to notebook --execute examples/compute-energy.ipynb examples/conformer-minimization.ipynb examples/parameter-gradients.ipynb"
+docs = "mkdocs build"
+docs-serve = "mkdocs serve"
