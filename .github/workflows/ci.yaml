@@ -21,13 +21,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ["311", "312"]
+        python-version: ["312"]
         # Exclude the CUDA envs as we can't test them on GitHub Actions
         base:
           - openeye-fe-examples-cpu
           - ambertools-fe-examples-cpu
           - openeye-cpu
-          - ambertools-examples-pydantic-1-cpu
+          - ambertools-examples-cpu
           - base
 
     steps:
