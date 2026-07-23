@@ -9,7 +9,10 @@ _ANGSTROM = openmm.unit.angstrom
 _GRAMS_PER_ML = openmm.unit.grams / openmm.unit.milliliters
 
 
-class GenerateCoordsConfig(pydantic.BaseModel):
+BaseModel = pydantic.BaseModel
+
+
+class GenerateCoordsConfig(BaseModel):
     """Configure how coordinates should be generated for a system using PACKMOL."""
 
     target_density: OpenMMQuantity[_GRAMS_PER_ML] = pydantic.Field(
@@ -39,7 +42,7 @@ class GenerateCoordsConfig(pydantic.BaseModel):
     )
 
 
-class MinimizationConfig(pydantic.BaseModel):
+class MinimizationConfig(BaseModel):
     """Configure how a system should be energy minimized."""
 
     tolerance: OpenMMQuantity[_KCAL_PER_MOL / _ANGSTROM] = pydantic.Field(
@@ -54,7 +57,7 @@ class MinimizationConfig(pydantic.BaseModel):
     )
 
 
-class SimulationConfig(pydantic.BaseModel):
+class SimulationConfig(BaseModel):
     temperature: OpenMMQuantity[openmm.unit.kelvin] = pydantic.Field(
         ...,
         description="The temperature to simulate at.",
