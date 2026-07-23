@@ -27,7 +27,7 @@ jobs:
           - openeye-fe-examples-cpu
           - ambertools-fe-examples-cpu
           - openeye-cpu
-          - ambertools-examples-pydantic-1-cpu
+          - ambertools-examples-cpu
           - base
 
     steps:
