@@ -61,7 +61,8 @@ def topology_from_smiles(smiles: str) -> smee.TensorTopology:
     Returns:
         The topology.
     """
-    Chem = pytest.importorskip("rdkit").Chem
+    pytest.importorskip("rdkit")
+    from rdkit import Chem
 
     mol = Chem.AddHs(Chem.MolFromSmiles(smiles))
 

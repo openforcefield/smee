@@ -27,7 +27,6 @@ jobs:
           - openeye-fe-examples-cpu
           - ambertools-fe-examples-cpu
           - openeye-cpu
-          - ambertools-examples-pydantic-1-cpu
           - base
 
     steps:
@@ -39,10 +38,11 @@ jobs:
         run: echo "${OE_LICENSE_TEXT}" > "${OE_LICENSE}"
 
       - name: Setup pixi
-        uses: prefix-dev/setup-pixi@v0.9.3
+        uses: prefix-dev/setup-pixi@v0.10.0
         with:
           cache: true
           environments: ${{ env.PIXI_ENV }}
+          frozen: true
 
       - name: Run tests
         run: pixi run -e "${{ env.PIXI_ENV }}" test

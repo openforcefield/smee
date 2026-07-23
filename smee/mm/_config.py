@@ -2,21 +2,14 @@
 
 import openmm.unit
 import pydantic
-from pydantic_units import OpenMMQuantity, quantity_serializer
+from pydantic_units import OpenMMQuantity
 
 _KCAL_PER_MOL = openmm.unit.kilocalories_per_mole
 _ANGSTROM = openmm.unit.angstrom
 _GRAMS_PER_ML = openmm.unit.grams / openmm.unit.milliliters
 
 
-if pydantic.__version__.startswith("1."):
-
-    class BaseModel(pydantic.BaseModel):
-        class Config:
-            json_encoders = {openmm.unit.Quantity: quantity_serializer}
-
-else:
-    BaseModel = pydantic.BaseModel
+BaseModel = pydantic.BaseModel
 
 
 class GenerateCoordsConfig(BaseModel):
