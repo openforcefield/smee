@@ -136,30 +136,21 @@ python = "3.11.*"
 [tool.pixi.feature.py312.dependencies]
 python = "3.12.*"
 
-[tool.pixi.feature.pydantic-2.dependencies]
-pydantic = ">=2.0"
-
-[tool.pixi.feature.pydantic-1.dependencies]
-pydantic = "<2.0"
-
 [tool.pixi.environments]
 # Default env is the same as openeye-fe-examples-cpu-py312
-default = { features = ["py312", "mm", "fe", "examples", "dev", "docs", "pydantic-2", "openeye"], solve-group = "cpu-py312-pydantic2" }
-openeye-fe-examples-cpu-py311 = { features = ["py311", "mm", "fe", "examples", "dev", "docs", "pydantic-2", "openeye"], solve-group = "cpu-py311-pydantic2" }
-openeye-fe-examples-cpu-py312 = { features = ["py312", "mm", "fe", "examples", "dev", "docs", "pydantic-2", "openeye"], solve-group = "cpu-py312-pydantic2" }
-ambertools-fe-examples-cpu-py311 = { features = ["py311", "mm", "fe", "examples", "dev", "docs", "pydantic-2", "ambertools"], solve-group = "cpu-py311-pydantic2" }
-ambertools-fe-examples-cpu-py312 = { features = ["py312", "mm", "fe", "examples", "dev", "docs", "pydantic-2", "ambertools"], solve-group = "cpu-py312-pydantic2" }
+default = { features = ["py312", "mm", "fe", "examples", "dev", "docs", "openeye"], solve-group = "cpu-py312" }
+openeye-fe-examples-cpu-py311 = { features = ["py311", "mm", "fe", "examples", "dev", "docs", "openeye"], solve-group = "cpu-py311" }
+openeye-fe-examples-cpu-py312 = { features = ["py312", "mm", "fe", "examples", "dev", "docs", "openeye"], solve-group = "cpu-py312" }
+ambertools-fe-examples-cpu-py311 = { features = ["py311", "mm", "fe", "examples", "dev", "docs", "ambertools"], solve-group = "cpu-py311" }
+ambertools-fe-examples-cpu-py312 = { features = ["py312", "mm", "fe", "examples", "dev", "docs", "ambertools"], solve-group = "cpu-py312" }
 # we get rid of examples here until smirnoff-plugins can be installed without ambertools
 # we also get rid of fe as absolv also installs ambertools
-openeye-cpu-py311 = { features = ["py311", "mm", "dev", "docs", "pydantic-2", "openeye"], solve-group = "cpu-py311-pydantic2" }
-openeye-cpu-py312 = { features = ["py312", "mm", "dev", "docs", "pydantic-2", "openeye"], solve-group = "cpu-py312-pydantic2" }
-ambertools-fe-examples-cu12-py311 = { features = ["py311", "cu12", "mm", "fe", "examples", "dev", "docs", "pydantic-2", "ambertools"], solve-group = "cu12-py311-pydantic2" }
-ambertools-fe-examples-cu12-py312 = { features = ["py312", "cu12", "mm", "fe", "examples", "dev", "docs", "pydantic-2", "ambertools"], solve-group = "cu12-py312-pydantic2" }
-# The fe feature is excluded when pydantic < 2 as femto (used by absolv) needs pydantic >= 2
-ambertools-examples-pydantic-1-cpu-py311 = { features = ["py311", "mm", "examples", "dev", "docs", "pydantic-1", "ambertools"], solve-group = "cpu-py311-pydantic1" }
-ambertools-examples-pydantic-1-cpu-py312 = { features = ["py312", "mm", "examples", "dev", "docs", "pydantic-1", "ambertools"], solve-group = "cpu-py312-pydantic1" }
-ambertools-examples-pydantic-1-cu12-py311 = { features = ["py311", "cu12", "mm", "examples", "dev", "docs", "pydantic-1", "ambertools"], solve-group = "cu12-py311-pydantic1" }
-ambertools-examples-pydantic-1-cu12-py312 = { features = ["py312", "cu12", "mm", "examples", "dev", "docs", "pydantic-1", "ambertools"], solve-group = "cu12-py312-pydantic1" }
+openeye-cpu-py311 = { features = ["py311", "mm", "dev", "docs", "openeye"], solve-group = "cpu-py311" }
+openeye-cpu-py312 = { features = ["py312", "mm", "dev", "docs", "openeye"], solve-group = "cpu-py312" }
+ambertools-examples-cu12-py311 = { features = ["py311", "cu12", "mm", "fe", "examples", "dev", "docs", "ambertools"], solve-group = "cu12-py311" }
+ambertools-examples-cu12-py312 = { features = ["py312", "cu12", "mm", "fe", "examples", "dev", "docs", "ambertools"], solve-group = "cu12-py312" }
+ambertools-examples-cpu-py311 = { features = ["py311", "mm", "fe", "examples", "dev", "docs", "ambertools", ], solve-group = "cpu-py311" }
+ambertools-examples-cpu-py312 = { features = ["py312", "mm", "fe", "examples", "dev", "docs", "ambertools", ], solve-group = "cpu-py312" }
 # mirrors the conda-forge `smee-base` recipe (no mm-stack deps)
 base-py311 = { features = ["py311", "dev"], solve-group = "cpu-py311-base" }
 base-py312 = { features = ["py312", "dev"], solve-group = "cpu-py312-base" }
