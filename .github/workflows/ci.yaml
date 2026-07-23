@@ -43,6 +43,7 @@ jobs:
         with:
           cache: true
           environments: ${{ env.PIXI_ENV }}
+          frozen: true
 
       - name: Run tests
         run: pixi run -e "${{ env.PIXI_ENV }}" test
