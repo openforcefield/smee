@@ -441,6 +441,7 @@ def convert_espaloma(
     charges: torch.Tensor | None = None,
     *,
     max_torsion_terms: int = 4,
+    dtype: torch.dtype = torch.float64,
     topology_cache: dict[str, smee.TensorTopology] | None = None,
 ) -> tuple[smee.TensorForceField, smee.TensorTopology]:
     """Convert espaloma GNN output to smee objects for energy evaluation.
@@ -461,6 +462,9 @@ def convert_espaloma(
         created.
     max_torsion_terms
         Fourier terms per torsion (must match GNN readout width).
+    dtype
+        Floating-point dtype for assignment matrices. Must match the
+        GNN parameter tensors (e.g. ``torch.float32`` for a float32 GNN).
     topology_cache
         Optional dict keyed by SMILES. If provided and the graph's SMILES
         is found, the cached topology is reused. The cache key includes
@@ -487,18 +491,6 @@ def convert_espaloma(
         else None
     )
 
-    # Infer dtype from GNN output so assignment matrices match param tensors.
-    _dtype = torch.float64
-    for d in gnn_params.values():
-        if d is not None:
-            for v in d.values():
-                if v.is_floating_point():
-                    _dtype = v.dtype
-                    break
-            else:
-                continue
-            break
-
     if (
         topology_cache is not None
         and cache_key is not None
@@ -511,7 +503,7 @@ def convert_espaloma(
             max_torsion_terms=max_torsion_terms,
             include_vdw=include_vdw,
             include_electrostatics=include_electrostatics,
-            dtype=_dtype,
+            dtype=dtype,
         )
         if topology_cache is not None and cache_key is not None:
             topology_cache[cache_key] = topology
