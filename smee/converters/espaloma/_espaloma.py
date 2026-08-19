@@ -18,78 +18,44 @@ from openff.units import unit
 import smee
 import smee.utils
 
+_KCAL_MOL = unit.kilocalorie_per_mole
+_ANGSTROM = unit.angstrom
+_RADIANS = unit.radian
+_UNITLESS = unit.dimensionless
 
-def _identity_sparse(
-    n: int,
+_KJ_PER_NM2_TO_KCAL_PER_A2 = (1.0 * unit.kilojoule_per_mole / unit.nanometer**2).m_as(
+    _KCAL_MOL / _ANGSTROM**2
+)
+_KJ_TO_KCAL = (1.0 * unit.kilojoule_per_mole).m_as(_KCAL_MOL)
+_NM_TO_ANGSTROM = (1.0 * unit.nanometer).m_as(_ANGSTROM)
+
+
+def _offset_sparse(
+    n_rows: int,
+    n_cols: int,
+    col_offset: int,
     dtype: torch.dtype = torch.float64,
-    device: torch.device | None = None,
 ) -> torch.sparse.Tensor:
-    """Return a sparse (n, n) identity matrix."""
-    idx = torch.arange(n, device=device)
-    indices = torch.stack([idx, idx])
-    values = torch.ones(n, dtype=dtype, device=device)
-    return torch.sparse_coo_tensor(indices, values, (n, n))
+    """Return a sparse (n_rows, n_cols) matrix with ones on the diagonal
+    starting at column ``col_offset``."""
+    row_idx = torch.arange(n_rows)
+    col_idx = row_idx + col_offset
+    values = torch.ones(n_rows, dtype=dtype)
+    return torch.sparse_coo_tensor(
+        torch.stack([row_idx, col_idx]), values, (n_rows, n_cols)
+    )
 
 
 def _synthetic_keys(
     prefix: str, n: int
 ) -> list[openff.interchange.models.PotentialKey]:
-    """Make PotentialKeys to slot in"""
     return [
         openff.interchange.models.PotentialKey(id=f"{prefix}-{i}") for i in range(n)
     ]
 
 
-def build_smee_topology(
-    graph,
-    max_torsion_terms: int = 4,
-    include_vdw: bool = True,
-    include_electrostatics: bool = True,
-    dtype: torch.dtype = torch.float64,
-) -> smee.TensorTopology:
-    """Build a smee TensorTopology from an espaloma Graph.
-
-    This constructs the molecule-level topology metadata (term indices,
-    exclusions, assignment matrices) needed by smee's energy routines.
-    The returned topology is independent of parameter values and can be
-    cached per molecule.
-
-
-    Note
-    ----
-    Each GNN-predicted term gets its own row in the parameter table via
-    identity assignment matrices (``I @ params = params``), unlike
-    SMIRKS-typed force fields where chemically equivalent terms share
-    rows. This SHOULD be ok, I think, because equivalence comes from
-    upstream: identical embeddings --> identical parameters, and gradients
-    accumulate on the shared ``nn.Parameter`` weights regardless.
-
-
-    Parameters
-    ----------
-    graph
-        An espaloma Graph with ``atomic_numbers``, ``bond_idxs``,
-        ``angle_idxs``, ``torsion_idxs``, ``improper_idxs``, and
-        ``mol`` (an OpenFF ``Molecule``).
-    max_torsion_terms
-        Number of Fourier terms per torsion (must match GNN readout width).
-    include_vdw
-        Whether to include the vdW nonbonded parameter map.
-    include_electrostatics
-        Whether to include the electrostatics nonbonded parameter map.
-    dtype
-        Floating-point dtype for assignment matrices. Must match the
-        parameter tensors that will be multiplied against them (e.g.
-        ``torch.float32`` for a float32 GNN).
-
-    Returns
-    -------
-    smee.TensorTopology
-        Topology ready for use with ``build_smee_force_field`` output.
-    """
-    mol = graph.mol
-    topology = mol.to_topology()
-
+def _count_interactions(graph, max_torsion_terms: int) -> dict[str, int]:
+    """Count the number of parameter rows each term type contributes."""
     n_atoms = graph.atomic_numbers.shape[0]
     n_bonds = graph.bond_idxs.shape[0]
     n_angles = graph.angle_idxs.shape[0]
@@ -102,6 +68,31 @@ def build_smee_topology(
         else improper_idxs.shape[0]
     )
 
+    return {
+        "atoms": n_atoms,
+        "bonds": n_bonds,
+        "angles": n_angles,
+        "propers": n_propers * max_torsion_terms,
+        "impropers": n_impropers * max_torsion_terms,
+    }
+
+
+def _build_topology(
+    graph,
+    max_torsion_terms: int,
+    include_vdw: bool,
+    include_electrostatics: bool,
+    dtype: torch.dtype,
+    offsets: dict[str, int],
+    totals: dict[str, int],
+) -> smee.TensorTopology:
+    """Build a single TensorTopology with assignment matrices that index
+    into a shared (concatenated) parameter table."""
+    mol = graph.mol
+    topology = mol.to_topology()
+
+    counts = _count_interactions(graph, max_torsion_terms)
+
     formal_charges = torch.tensor(
         [atom.formal_charge.m_as(unit.e) for atom in topology.atoms],
         dtype=torch.long,
@@ -110,47 +101,43 @@ def build_smee_topology(
         [bond.bond_order for bond in topology.bonds], dtype=torch.long
     )
 
-    # --- Valence parameter maps (identity assignment) ---
     parameters: dict[str, smee.ParameterMap] = {}
 
-    if n_bonds > 0:
+    if counts["bonds"] > 0:
         parameters["Bonds"] = smee.ValenceParameterMap(
             particle_idxs=graph.bond_idxs.long(),
-            assignment_matrix=_identity_sparse(n_bonds, dtype),
+            assignment_matrix=_offset_sparse(
+                counts["bonds"], totals["bonds"], offsets["bonds"], dtype
+            ),
         )
 
-    if n_angles > 0:
+    if counts["angles"] > 0:
         parameters["Angles"] = smee.ValenceParameterMap(
             particle_idxs=graph.angle_idxs.long(),
-            assignment_matrix=_identity_sparse(n_angles, dtype),
+            assignment_matrix=_offset_sparse(
+                counts["angles"], totals["angles"], offsets["angles"], dtype
+            ),
         )
 
-    # smee stores one row per Fourier term; espaloma packs n_terms k values
-    # per torsion. Expand to match (same as Interchange's mult-indexed key_map).
-    # note torch.repeat_interleave is equivalent to numpy.repeat!
-    # torch.repeat is numpy.tile
-    # I'm assuming we're only training ks
-    if n_propers > 0:
-        n_proper_rows = n_propers * max_torsion_terms
-        expanded_proper_idxs = graph.torsion_idxs.long().repeat_interleave(
-            max_torsion_terms, dim=0
-        )
+    if counts["propers"] > 0:
+        expanded = graph.torsion_idxs.long().repeat_interleave(max_torsion_terms, dim=0)
         parameters["ProperTorsions"] = smee.ValenceParameterMap(
-            particle_idxs=expanded_proper_idxs,
-            assignment_matrix=_identity_sparse(n_proper_rows, dtype),
+            particle_idxs=expanded,
+            assignment_matrix=_offset_sparse(
+                counts["propers"], totals["propers"], offsets["propers"], dtype
+            ),
         )
 
-    if n_impropers > 0:
-        n_improper_rows = n_impropers * max_torsion_terms
-        expanded_improper_idxs = improper_idxs.long().repeat_interleave(
-            max_torsion_terms, dim=0
-        )
+    improper_idxs = getattr(graph, "improper_idxs", None)
+    if counts["impropers"] > 0:
+        expanded = improper_idxs.long().repeat_interleave(max_torsion_terms, dim=0)
         parameters["ImproperTorsions"] = smee.ValenceParameterMap(
-            particle_idxs=expanded_improper_idxs,
-            assignment_matrix=_identity_sparse(n_improper_rows, dtype),
+            particle_idxs=expanded,
+            assignment_matrix=_offset_sparse(
+                counts["impropers"], totals["impropers"], offsets["impropers"], dtype
+            ),
         )
 
-    # --- Nonbonded parameter maps ---
     if include_vdw or include_electrostatics:
         exclusion_dict = smee.utils.find_exclusions(topology)
         attribute_cols = (
@@ -176,14 +163,18 @@ def build_smee_topology(
 
         if include_vdw:
             parameters["vdW"] = smee.NonbondedParameterMap(
-                assignment_matrix=_identity_sparse(n_atoms, dtype),
+                assignment_matrix=_offset_sparse(
+                    counts["atoms"], totals["atoms"], offsets["atoms"], dtype
+                ),
                 exclusions=exclusions,
                 exclusion_scale_idxs=exclusion_scale_idxs,
             )
 
         if include_electrostatics:
             parameters["Electrostatics"] = smee.NonbondedParameterMap(
-                assignment_matrix=_identity_sparse(n_atoms, dtype),
+                assignment_matrix=_offset_sparse(
+                    counts["atoms"], totals["atoms"], offsets["atoms"], dtype
+                ),
                 exclusions=exclusions.clone() if include_vdw else exclusions,
                 exclusion_scale_idxs=(
                     exclusion_scale_idxs.clone()
@@ -201,6 +192,29 @@ def build_smee_topology(
     )
 
 
+def _concat_valence_params(
+    all_params: list[dict[str, dict[str, torch.Tensor] | None]],
+    key: str,
+    param_names: list[str],
+) -> dict[str, torch.Tensor] | None:
+    """Concatenate a valence parameter type across molecules, returning None
+    if no molecule has that parameter type."""
+    parts = [p.get(key) for p in all_params]
+    if all(p is None for p in parts):
+        return None
+
+    result = {}
+    for name in param_names:
+        tensors = []
+        for p in parts:
+            if p is not None and name in p:
+                tensors.append(p[name])
+        if tensors:
+            result[name] = torch.cat(tensors, dim=0)
+
+    return result if result else None
+
+
 def build_smee_force_field(
     gnn_params: dict[str, dict[str, torch.Tensor] | None],
     charges: torch.Tensor | None = None,
@@ -209,7 +223,7 @@ def build_smee_force_field(
     vdw_scale_14: float = 0.5,
     coul_scale_14: float = 0.8333333333,
 ) -> smee.TensorForceField:
-    """Build a smee TensorForceField from GNN-predicted parameters.
+    """Build a smee TensorForceField from (possibly concatenated) GNN parameters.
 
     All parameter tensors are passed through WITHOUT detaching, so gradients
     flow back to the GNN weights.
@@ -217,49 +231,27 @@ def build_smee_force_field(
     Parameters
     ----------
     gnn_params
-        Output of ``model(graph)`` — the Readout output dict with keys
-        ``"atom"``, ``"bond"``, ``"angle"``, ``"torsion"``, ``"improper"``.
-        If atom params include ``"sigma"`` [nm] and ``"epsilon"`` [kJ/mol],
-        a vdW potential is created. Other atom-level keys (e.g.
-        ``"electronegativity"``, ``"hardness"``) are ignored here.
-        Bond params: ``"k"`` [kJ/mol/nm^2] and ``"length"`` [nm].
-        Angle params: ``"k"`` [kJ/mol/rad^2] and ``"angle"`` [rad].
-        Torsion params: ``"k"`` [kJ/mol], shape ``(n_torsions, n_terms)``.
+        Parameter dicts keyed by topology order (``"atom"``, ``"bond"``,
+        ``"angle"``, ``"torsion"``, ``"improper"``). For multi-molecule
+        systems, tensors should already be concatenated across molecules.
     charges
-        Partial charges [e], shape ``(n_atoms,)``. Can be fixed (AM1-BCC)
-        or GNN-predicted (e.g. from charge equilibration). If ``None``,
-        no electrostatics potential is created.
+        Partial charges [e], shape ``(n_atoms_total,)``.
     cutoff_angstrom
-        Nonbonded cutoff distance in Angstrom.
+        Nonbonded cutoff in Angstrom.
     switch_width_angstrom
         Switch function width in Angstrom.
     vdw_scale_14
-        1-4 vdW scaling factor (0.5 for SMIRNOFF).
+        1-4 vdW scaling factor.
     coul_scale_14
-        1-4 electrostatic scaling factor (5/6 for SMIRNOFF).
-
-    Returns
-    -------
-    smee.TensorForceField
+        1-4 electrostatic scaling factor.
     """
-    _kcal_mol = unit.kilocalorie_per_mole
-    _angstrom = unit.angstrom
-    _radians = unit.radian
-    _unitless = unit.dimensionless
-
-    _kj_per_nm2_to_kcal_per_a2 = (
-        1.0 * unit.kilojoule_per_mole / unit.nanometer**2
-    ).m_as(_kcal_mol / _angstrom**2)
-    _kj_to_kcal = (1.0 * unit.kilojoule_per_mole).m_as(_kcal_mol)
-    _nm_to_angstrom = (1.0 * unit.nanometer).m_as(_angstrom)
-
     potentials = []
 
     # --- Bonds ---
     bond_params = gnn_params.get("bond")
     if bond_params is not None and bond_params["k"].shape[0] > 0:
-        k_bond = bond_params["k"] * _kj_per_nm2_to_kcal_per_a2
-        length_bond = bond_params["length"] * _nm_to_angstrom
+        k_bond = bond_params["k"] * _KJ_PER_NM2_TO_KCAL_PER_A2
+        length_bond = bond_params["length"] * _NM_TO_ANGSTROM
         if k_bond.dim() == 2 and k_bond.shape[-1] == 1:
             k_bond = k_bond.squeeze(-1)
         if length_bond.dim() == 2 and length_bond.shape[-1] == 1:
@@ -273,14 +265,14 @@ def build_smee_force_field(
                 parameters=bond_tensor,
                 parameter_keys=_synthetic_keys("bond", bond_tensor.shape[0]),
                 parameter_cols=("k", "length"),
-                parameter_units=(_kcal_mol / _angstrom**2, _angstrom),
+                parameter_units=(_KCAL_MOL / _ANGSTROM**2, _ANGSTROM),
             )
         )
 
     # --- Angles ---
     angle_params = gnn_params.get("angle")
     if angle_params is not None and angle_params["k"].shape[0] > 0:
-        k_angle = angle_params["k"] * _kj_to_kcal
+        k_angle = angle_params["k"] * _KJ_TO_KCAL
         eq_angle = angle_params["angle"]
         if k_angle.dim() == 2 and k_angle.shape[-1] == 1:
             k_angle = k_angle.squeeze(-1)
@@ -295,14 +287,14 @@ def build_smee_force_field(
                 parameters=angle_tensor,
                 parameter_keys=_synthetic_keys("angle", angle_tensor.shape[0]),
                 parameter_cols=("k", "angle"),
-                parameter_units=(_kcal_mol / _radians**2, _radians),
+                parameter_units=(_KCAL_MOL / _RADIANS**2, _RADIANS),
             )
         )
 
     # --- Proper torsions ---
     torsion_params = gnn_params.get("torsion")
     if torsion_params is not None and torsion_params["k"].shape[0] > 0:
-        k_torsion = torsion_params["k"] * _kj_to_kcal
+        k_torsion = torsion_params["k"] * _KJ_TO_KCAL
         n_torsions, n_terms = k_torsion.shape
 
         k_flat = k_torsion.reshape(-1)
@@ -320,7 +312,7 @@ def build_smee_force_field(
                 parameters=proper_tensor,
                 parameter_keys=_synthetic_keys("proper", proper_tensor.shape[0]),
                 parameter_cols=("k", "periodicity", "phase", "idivf"),
-                parameter_units=(_kcal_mol, _unitless, _radians, _unitless),
+                parameter_units=(_KCAL_MOL, _UNITLESS, _RADIANS, _UNITLESS),
             )
         )
 
@@ -331,7 +323,7 @@ def build_smee_force_field(
         and "k" in improper_params
         and improper_params["k"].shape[0] > 0
     ):
-        k_improper = improper_params["k"] * _kj_to_kcal
+        k_improper = improper_params["k"] * _KJ_TO_KCAL
         n_imp, n_terms_imp = k_improper.shape
 
         k_imp_flat = k_improper.reshape(-1)
@@ -351,7 +343,7 @@ def build_smee_force_field(
                 parameters=improper_tensor,
                 parameter_keys=_synthetic_keys("improper", improper_tensor.shape[0]),
                 parameter_cols=("k", "periodicity", "phase", "idivf"),
-                parameter_units=(_kcal_mol, _unitless, _radians, _unitless),
+                parameter_units=(_KCAL_MOL, _UNITLESS, _RADIANS, _UNITLESS),
             )
         )
 
@@ -361,8 +353,8 @@ def build_smee_force_field(
         atom_params is not None and "epsilon" in atom_params and "sigma" in atom_params
     )
     if has_vdw:
-        epsilon = atom_params["epsilon"] * _kj_to_kcal
-        sigma = atom_params["sigma"] * _nm_to_angstrom
+        epsilon = atom_params["epsilon"] * _KJ_TO_KCAL
+        sigma = atom_params["sigma"] * _NM_TO_ANGSTROM
         if epsilon.dim() == 2 and epsilon.shape[-1] == 1:
             epsilon = epsilon.squeeze(-1)
         if sigma.dim() == 2 and sigma.shape[-1] == 1:
@@ -381,7 +373,7 @@ def build_smee_force_field(
                 parameters=vdw_tensor,
                 parameter_keys=_synthetic_keys("vdw", vdw_tensor.shape[0]),
                 parameter_cols=("epsilon", "sigma"),
-                parameter_units=(_kcal_mol, _angstrom),
+                parameter_units=(_KCAL_MOL, _ANGSTROM),
                 attributes=vdw_attributes,
                 attribute_cols=(
                     "scale_12",
@@ -392,12 +384,12 @@ def build_smee_force_field(
                     "switch_width",
                 ),
                 attribute_units=(
-                    _unitless,
-                    _unitless,
-                    _unitless,
-                    _unitless,
-                    _angstrom,
-                    _angstrom,
+                    _UNITLESS,
+                    _UNITLESS,
+                    _UNITLESS,
+                    _UNITLESS,
+                    _ANGSTROM,
+                    _ANGSTROM,
                 ),
             )
         )
@@ -407,7 +399,7 @@ def build_smee_force_field(
         if charges.dim() == 2 and charges.shape[-1] == 1:
             charges = charges.squeeze(-1)
 
-        charge_tensor = charges.unsqueeze(-1)  # (n_atoms, 1)
+        charge_tensor = charges.unsqueeze(-1)
         coul_attributes = torch.tensor(
             [0.0, 0.0, coul_scale_14, 1.0, cutoff_angstrom],
             dtype=charge_tensor.dtype,
@@ -419,7 +411,7 @@ def build_smee_force_field(
                 parameters=charge_tensor,
                 parameter_keys=_synthetic_keys("charge", charge_tensor.shape[0]),
                 parameter_cols=("charge",),
-                parameter_units=(_unitless,),
+                parameter_units=(_UNITLESS,),
                 attributes=coul_attributes,
                 attribute_cols=(
                     "scale_12",
@@ -428,7 +420,13 @@ def build_smee_force_field(
                     "scale_15",
                     "cutoff",
                 ),
-                attribute_units=(_unitless, _unitless, _unitless, _unitless, _angstrom),
+                attribute_units=(
+                    _UNITLESS,
+                    _UNITLESS,
+                    _UNITLESS,
+                    _UNITLESS,
+                    _ANGSTROM,
+                ),
             )
         )
 
@@ -436,77 +434,144 @@ def build_smee_force_field(
 
 
 def convert_espaloma(
-    graph,
-    gnn_params: dict[str, dict[str, torch.Tensor] | None],
-    charges: torch.Tensor | None = None,
+    graphs,
+    gnn_params: (
+        dict[str, dict[str, torch.Tensor] | None]
+        | list[dict[str, dict[str, torch.Tensor] | None]]
+    ),
+    charges: torch.Tensor | list[torch.Tensor] | None = None,
     *,
     max_torsion_terms: int = 4,
     dtype: torch.dtype = torch.float64,
     topology_cache: dict[str, smee.TensorTopology] | None = None,
-) -> tuple[smee.TensorForceField, smee.TensorTopology]:
+) -> tuple[smee.TensorForceField, list[smee.TensorTopology]]:
     """Convert espaloma GNN output to smee objects for energy evaluation.
+
+    Accepts one or more molecules. When multiple molecules are provided,
+    parameter tensors are concatenated into a single ``TensorForceField``
+    and each molecule gets its own ``TensorTopology`` whose assignment
+    matrices index into the shared parameter table — the same layout
+    ``convert_interchange`` uses.
 
     Parameters
     ----------
-    graph
-        Espaloma molecular graph (must have ``mol`` attribute).
+    graphs
+        One or more espaloma molecular graphs (each must have a ``mol``
+        attribute).
     gnn_params
-        Output of ``Readout(graph)`` — parameter dicts keyed by topology
-        order (``"atom"``, ``"bond"``, ``"angle"``, ``"torsion"``,
-        ``"improper"``). All tensors must be in espaloma's internal units
-        (nm, kJ/mol, rad). If atom params include ``"sigma"`` and
-        ``"epsilon"``, a vdW potential is created.
+        Output of ``Readout(graph)`` for each graph — parameter dicts
+        keyed by topology order (``"atom"``, ``"bond"``, ``"angle"``,
+        ``"torsion"``, ``"improper"``). A single dict is accepted for
+        one molecule.
     charges
-        Partial charges [e], shape ``(n_atoms,)``. Can be fixed (AM1-BCC)
-        or GNN-predicted. If ``None``, no electrostatics potential is
-        created.
+        Partial charges [e] for each molecule. A single tensor or a list
+        of tensors, one per graph. ``None`` omits electrostatics.
     max_torsion_terms
         Fourier terms per torsion (must match GNN readout width).
     dtype
         Floating-point dtype for assignment matrices. Must match the
-        GNN parameter tensors (e.g. ``torch.float32`` for a float32 GNN).
+        GNN parameter tensors.
     topology_cache
-        Optional dict keyed by SMILES. If provided and the graph's SMILES
-        is found, the cached topology is reused. The cache key includes
-        which nonbonded terms are present, so the same molecule can be
-        cached with different configurations.
+        Optional dict keyed by SMILES. If provided and the graph's
+        SMILES is found, the cached topology is reused.
 
     Returns
     -------
-    tuple of (TensorForceField, TensorTopology)
-        Force field with GNN-predicted parameters (in autograd graph)
-        and the molecule topology. Ready for ``smee.compute_energy``.
+    tuple of (TensorForceField, list[TensorTopology])
     """
-    smiles = getattr(graph, "smiles", None)
-
-    atom_params = gnn_params.get("atom")
-    include_vdw = (
-        atom_params is not None and "epsilon" in atom_params and "sigma" in atom_params
-    )
-    include_electrostatics = charges is not None
-
-    cache_key = (
-        f"{smiles}:vdw={include_vdw}:elec={include_electrostatics}"
-        if smiles is not None
-        else None
-    )
-
-    if (
-        topology_cache is not None
-        and cache_key is not None
-        and cache_key in topology_cache
-    ):
-        topology = topology_cache[cache_key]
+    # --- normalise inputs to lists ---
+    if not isinstance(graphs, list):
+        graphs = [graphs]
+    if isinstance(gnn_params, dict):
+        gnn_params = [gnn_params]
+    if charges is None:
+        charges_list: list[torch.Tensor | None] = [None] * len(graphs)
+    elif isinstance(charges, torch.Tensor):
+        charges_list = [charges]
     else:
-        topology = build_smee_topology(
-            graph,
-            max_torsion_terms=max_torsion_terms,
-            include_vdw=include_vdw,
-            include_electrostatics=include_electrostatics,
-            dtype=dtype,
-        )
-        if topology_cache is not None and cache_key is not None:
-            topology_cache[cache_key] = topology
+        charges_list = charges
 
-    ff = build_smee_force_field(gnn_params, charges)
-    return ff, topology
+    n_molecules = len(graphs)
+    assert len(gnn_params) == n_molecules
+    assert len(charges_list) == n_molecules
+
+    # --- determine which nonbonded terms to include ---
+    include_vdw = any(
+        p.get("atom") is not None and "epsilon" in p["atom"] and "sigma" in p["atom"]
+        for p in gnn_params
+    )
+    include_electrostatics = any(c is not None for c in charges_list)
+
+    # --- compute per-molecule interaction counts and cumulative offsets ---
+    all_counts = [_count_interactions(g, max_torsion_terms) for g in graphs]
+    totals = {key: sum(c[key] for c in all_counts) for key in all_counts[0]}
+    cumulative_offsets = []
+    running = dict.fromkeys(all_counts[0], 0)
+    for c in all_counts:
+        cumulative_offsets.append(dict(running))
+        for key in running:
+            running[key] += c[key]
+
+    # --- build topologies ---
+    topologies = []
+    for i, graph in enumerate(graphs):
+        smiles = getattr(graph, "smiles", None)
+        cache_key = (
+            f"{smiles}:vdw={include_vdw}:elec={include_electrostatics}:n={n_molecules}"
+            if smiles is not None
+            else None
+        )
+
+        cached = (
+            topology_cache is not None
+            and cache_key is not None
+            and cache_key in topology_cache
+        )
+
+        if cached:
+            topologies.append(topology_cache[cache_key])
+        else:
+            topo = _build_topology(
+                graph,
+                max_torsion_terms,
+                include_vdw,
+                include_electrostatics,
+                dtype,
+                cumulative_offsets[i],
+                totals,
+            )
+            topologies.append(topo)
+            if topology_cache is not None and cache_key is not None:
+                topology_cache[cache_key] = topo
+
+    # --- concatenate parameters across molecules ---
+    combined_params: dict[str, dict[str, torch.Tensor] | None] = {}
+
+    bond_concat = _concat_valence_params(gnn_params, "bond", ["k", "length"])
+    if bond_concat is not None:
+        combined_params["bond"] = bond_concat
+
+    angle_concat = _concat_valence_params(gnn_params, "angle", ["k", "angle"])
+    if angle_concat is not None:
+        combined_params["angle"] = angle_concat
+
+    torsion_concat = _concat_valence_params(gnn_params, "torsion", ["k"])
+    if torsion_concat is not None:
+        combined_params["torsion"] = torsion_concat
+
+    improper_concat = _concat_valence_params(gnn_params, "improper", ["k"])
+    if improper_concat is not None:
+        combined_params["improper"] = improper_concat
+
+    atom_concat = _concat_valence_params(gnn_params, "atom", ["sigma", "epsilon"])
+    if atom_concat is not None:
+        combined_params["atom"] = atom_concat
+
+    combined_charges = None
+    if include_electrostatics:
+        charge_tensors = [c for c in charges_list if c is not None]
+        if charge_tensors:
+            combined_charges = torch.cat(charge_tensors, dim=0)
+
+    ff = build_smee_force_field(combined_params, combined_charges)
+    return ff, topologies
