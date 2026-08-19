@@ -58,8 +58,29 @@ jobs:
           flags: unittests
           token: ${{ secrets.CODECOV_TOKEN }}
 
+  test-espaloma:
+    name: Test (espaloma converter)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.9.3
+        with:
+          cache: true
+          environments: base-py312
+
+      - name: Install espaloma + torch-geometric
+        run: |
+          pixi run -e base-py312 pip install torch-geometric
+          pixi run -e base-py312 pip install "openff-espaloma @ git+https://github.com/JHoeflich1/openff-espaloma.git@spice_dataset"
+
+      - name: Run espaloma tests
+        run: pixi run -e base-py312 pytest -v --color=yes smee/tests/convertors/espaloma/
+
   test:
-    needs: test-matrix
+    needs: [test-matrix, test-espaloma]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -67,5 +88,11 @@ jobs:
         run: |
           if [[ "${{ needs.test-matrix.result }}" != "success" ]]; then
             echo "One or more test matrix jobs failed or were cancelled."
+            exit 1
+          fi
+      - name: Check espaloma test result
+        run: |
+          if [[ "${{ needs.test-espaloma.result }}" != "success" ]]; then
+            echo "Espaloma converter tests failed or were cancelled."
             exit 1
           fi
